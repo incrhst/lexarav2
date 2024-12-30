@@ -1,0 +1,48 @@
+# Application-specific pages
+src/pages/ApplicationForm/
+src/pages/ApplicationDetails/
+src/pages/Gazette/
+src/pages/AgentDashboard/
+
+# Demo mode components
+src/components/DemoMode*
+src/components/Demo*
+src/hooks/useDemo*
+
+# Application-specific features
+src/hooks/useApplications.ts
+src/hooks/useOppositions.ts
+src/hooks/useClientApplications.ts
+src/components/Application*.tsx
+
+# Non-essential documentation
+docs/*
+!docs/admin-manual.md
+
+# Application-specific components
+src/components/ApplicationStatusBadge.tsx
+src/components/OppositionButton.tsx
+src/components/SearchFilters.tsx
+src/components/Pagination.tsx
+
+# Stats and activity monitoring
+src/hooks/useStats.ts
+src/hooks/useRecentActivity.ts
+src/hooks/useAdminStats.ts
+
+# Agent-related features
+src/hooks/useAgentDetails.ts
+src/hooks/useAgentClients.ts
+src/hooks/useAgents.ts
+
+# Keep only auth/role related files
+!src/hooks/useAuth.ts
+!src/hooks/useUserRole.ts
+!src/components/LoginForm.tsx
+!src/pages/Login.tsx
+!src/types/index.ts
+!src/components/UserRoleIndicator.tsx
+!src/components/ProtectedRoute.tsx
+!src/lib/supabase.ts
+!supabase/migrations/0001_ancient_math.sql
+!supabase/migrations/0002_*.sql

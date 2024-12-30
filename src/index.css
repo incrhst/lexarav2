@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-primary;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-background hover:bg-primary-light focus:ring-2 focus:ring-primary-lighter focus:ring-offset-2 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-background-alt text-primary border border-primary hover:bg-background focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors;
+  }
+}
