@@ -1,7 +1,10 @@
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import ApplicantInfo from './steps/ApplicantInfo';
-import TrademarkDetails from './steps/TrademarkDetails';
+import ApplicationType from './steps/ApplicationType';
+import IPDetails from './steps/TrademarkDetails';
+import CopyrightDetails from './steps/CopyrightDetails';
+import PatentDetails from './steps/PatentDetails';
 import GoodsServices from './steps/GoodsServices';
 import Review from './steps/Review';
 
@@ -13,13 +16,6 @@ interface Props {
   onCancel: () => void;
 }
 
-const steps = [
-  { title: 'Applicant Information', component: ApplicantInfo },
-  { title: 'Trademark Details', component: TrademarkDetails },
-  { title: 'Goods & Services', component: GoodsServices },
-  { title: 'Review & Submit', component: Review },
-];
-
 export default function ApplicationFormStepper({
   currentStep,
   form,
@@ -27,7 +23,45 @@ export default function ApplicationFormStepper({
   onSubmit,
   onCancel,
 }: Props) {
-  const CurrentStepComponent = steps[currentStep].component;
+  const applicationType = form.watch('applicationType');
+
+  const getSteps = () => {
+    const baseSteps = [
+      { title: 'Application Type', component: ApplicationType },
+      { title: 'Applicant Information', component: ApplicantInfo },
+    ];
+
+    switch (applicationType) {
+      case 'trademark':
+        return [
+          ...baseSteps,
+          { title: 'Trademark Details', component: IPDetails },
+          { title: 'Goods & Services', component: GoodsServices },
+          { title: 'Review & Submit', component: Review },
+        ];
+      case 'copyright':
+        return [
+          ...baseSteps,
+          { title: 'Copyright Details', component: CopyrightDetails },
+          { title: 'Review & Submit', component: Review },
+        ];
+      case 'patent':
+        return [
+          ...baseSteps,
+          { title: 'Patent Details', component: PatentDetails },
+          { title: 'Review & Submit', component: Review },
+        ];
+      default:
+        return baseSteps;
+    }
+  };
+
+  const steps = getSteps();
+  const CurrentStepComponent = steps[currentStep]?.component;
+
+  if (!CurrentStepComponent) {
+    return null;
+  }
 
   return (
     <div className="space-y-8">

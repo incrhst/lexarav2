@@ -1,9 +1,23 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, BookOpen, Shield } from 'lucide-react';
 import Button from '../../../components/Button';
+import { useAuth } from '../../../hooks/useAuth';
 
 export default function PublicDashboard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleCreateApplication = () => {
+    if (!user) {
+      // Store the intended redirect
+      sessionStorage.setItem('postLoginRedirect', '/applications/new');
+      navigate('/login');
+      return;
+    }
+    navigate('/applications/new');
+  };
+
   return (
     <div className="space-y-8">
       <header>
@@ -35,13 +49,25 @@ export default function PublicDashboard() {
             File Applications
           </h3>
           <p className="text-primary-light mb-4">
-            Register an account to submit and manage your IP applications.
+            Submit and manage your IP applications - trademarks, copyrights, and patents.
           </p>
-          <Link to="/register">
-            <Button variant="primary" size="sm">
-              Create Account
+          <div className="space-y-2">
+            <Button 
+              variant="primary" 
+              size="sm" 
+              onClick={handleCreateApplication}
+              className="w-full"
+            >
+              Create Application
             </Button>
-          </Link>
+            {!user && (
+              <Link to="/register">
+                <Button variant="secondary" size="sm" className="w-full">
+                  Create Account
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="bg-background-alt p-6 rounded-lg shadow-sm">
@@ -52,11 +78,19 @@ export default function PublicDashboard() {
           <p className="text-primary-light mb-4">
             Track application status and file oppositions to protect your IP rights.
           </p>
-          <Link to="/register">
-            <Button variant="secondary" size="sm">
-              Get Started
-            </Button>
-          </Link>
+          {user ? (
+            <Link to="/dashboard">
+              <Button variant="secondary" size="sm">
+                View Dashboard
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/login">
+              <Button variant="secondary" size="sm">
+                Sign In
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
