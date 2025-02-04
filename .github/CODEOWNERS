@@ -1,0 +1,13 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# they will be requested for review when someone opens a pull request.
+*       @yourusername
+
+# Specific ownership for critical paths
+/src/lib/api.ts                  @yourusername
+/src/config/                     @yourusername
+/src/pages/ApplicationForm/      @yourusername
+/deploy.sh                       @yourusername
+/.github/                        @yourusername
+/docker-compose.yml             @yourusername
+/Dockerfile                     @yourusername 
