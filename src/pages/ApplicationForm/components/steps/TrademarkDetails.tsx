@@ -11,7 +11,7 @@ interface Props {
   isLastStep: boolean;
 }
 
-export default function TrademarkDetails({
+export default function IPDetails({
   form,
   onSubmit,
   onCancel,
@@ -23,14 +23,14 @@ export default function TrademarkDetails({
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
       <FormField
-        label="Trademark Name"
+        label="IP Name"
         error={errors.trademarkName?.message}
       >
         <input
           type="text"
-          {...register('trademarkName', { required: 'Trademark name is required' })}
+          {...register('trademarkName', { required: 'IP name is required' })}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          placeholder="Enter the trademark name"
+          placeholder="Enter the IP name"
         />
       </FormField>
 
@@ -48,7 +48,7 @@ export default function TrademarkDetails({
           })}
           rows={4}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          placeholder="Describe your trademark in detail..."
+          placeholder="Describe your intellectual property in detail..."
         />
       </FormField>
 
@@ -67,7 +67,7 @@ export default function TrademarkDetails({
       </FormField>
 
       <FormField
-        label="Logo"
+        label="Logo/Image"
         optional
         error={errors.logo?.message}
       >

@@ -19,8 +19,9 @@ export default function Review({
 }: Props) {
   const { getValues } = form;
   const values = getValues();
+  const applicationType = values.applicationType;
 
-  const sections = [
+  const commonSections = [
     {
       title: 'Applicant Information',
       fields: [
@@ -32,8 +33,11 @@ export default function Review({
         { label: 'Country', value: values.applicantCountry },
       ],
     },
+  ];
+
+  const trademarkSections = [
     {
-      title: 'Trademark Details',
+      title: 'IP Details',
       fields: [
         { label: 'Trademark Name', value: values.trademarkName },
         { label: 'Description', value: values.trademarkDescription },
@@ -55,17 +59,117 @@ export default function Review({
     },
   ];
 
+  const copyrightSections = [
+    {
+      title: 'Work Information',
+      fields: [
+        { label: 'Title of Work', value: values.workTitle },
+        { label: 'Type of Work', value: values.workType },
+        { label: 'Creation Date', value: values.creationDate },
+        { label: 'Publication Date', value: values.publicationDate },
+        { label: 'Medium', value: values.medium },
+        { label: 'Description', value: values.workDescription },
+      ],
+    },
+    {
+      title: 'Authorship Information',
+      fields: [
+        { label: 'Author Name(s)', value: values.authorNames },
+        { label: 'Author Address', value: values.authorAddress },
+        { label: 'Author Nationality', value: values.authorNationality },
+        { label: 'Contribution Type', value: values.contributionType },
+      ],
+    },
+    {
+      title: 'Rights Holder Information',
+      fields: [
+        { label: 'Rights Holder Name(s)', value: values.rightsHolderNames },
+        { label: 'Rights Holder Address', value: values.rightsHolderAddress },
+        { label: 'Rights Holder Nationality', value: values.rightsHolderNationality },
+      ],
+    },
+  ];
+
+  const patentSections = [
+    {
+      title: 'Invention Information',
+      fields: [
+        { label: 'Title of Invention', value: values.inventionTitle },
+        { label: 'Technical Field', value: values.technicalField },
+        { label: 'Abstract', value: values.abstract },
+        { label: 'Detailed Description', value: values.detailedDescription },
+        { label: 'Claims', value: values.claims },
+      ],
+    },
+    {
+      title: 'Prior Art Information',
+      fields: [
+        { label: 'Prior Art References', value: values.priorArt },
+        { label: 'Related Patent Numbers', value: values.relatedPatents },
+        { label: 'Related Applications', value: values.relatedApplications },
+      ],
+    },
+    {
+      title: 'Filing Information',
+      fields: [
+        { label: 'Application Type', value: values.patentApplicationType },
+        { label: 'Priority Claim', value: values.priorityClaim },
+        { label: 'Previous Registration', value: values.previousRegistration },
+      ],
+    },
+    {
+      title: 'Declarations',
+      fields: [
+        { 
+          label: 'Novelty Declaration', 
+          value: values.noveltyDeclaration ? 'Confirmed' : 'Not Confirmed' 
+        },
+        { 
+          label: 'Industrial Applicability', 
+          value: values.industrialDeclaration ? 'Confirmed' : 'Not Confirmed' 
+        },
+        { 
+          label: 'Inventor Declaration', 
+          value: values.inventorDeclaration ? 'Confirmed' : 'Not Confirmed' 
+        },
+      ],
+    },
+  ];
+
+  const getSections = () => {
+    switch (applicationType) {
+      case 'trademark':
+        return [...commonSections, ...trademarkSections];
+      case 'copyright':
+        return [...commonSections, ...copyrightSections];
+      case 'patent':
+        return [...commonSections, ...patentSections];
+      default:
+        return commonSections;
+    }
+  };
+
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
       <div className="bg-white shadow rounded-lg divide-y divide-gray-200">
-        {sections.map((section) => (
+        {getSections().map((section) => (
           <div key={section.title} className="px-4 py-5 sm:p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               {section.title}
             </h3>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
               {section.fields.map((field) => (
-                <div key={field.label}>
+                <div 
+                  key={field.label} 
+                  className={
+                    field.label === 'Description' || 
+                    field.label === 'Abstract' || 
+                    field.label === 'Detailed Description' || 
+                    field.label === 'Claims' 
+                      ? 'sm:col-span-2' 
+                      : ''
+                  }
+                >
                   <dt className="text-sm font-medium text-gray-500">
                     {field.label}
                   </dt>
