@@ -1,0 +1,15 @@
+{
+  "personalizations": [
+    {
+      "to": [{"email": "david@lexara.work"}]
+    }
+  ],
+  "from": {"email": "alerts@lexara.work"},
+  "subject": "Test Email from SendGrid",
+  "content": [
+    {
+      "type": "text/plain",
+      "value": "This is a test email from SendGrid API"
+    }
+  ]
+} 
