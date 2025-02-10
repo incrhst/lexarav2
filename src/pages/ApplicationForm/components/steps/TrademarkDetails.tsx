@@ -23,6 +23,21 @@ export default function IPDetails({
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
       <FormField
+        label="Jurisdiction"
+        error={errors.trademarkJurisdiction?.message}
+      >
+        <select
+          {...register('trademarkJurisdiction', { required: 'Jurisdiction is required' })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        >
+          <option value="">Select a jurisdiction</option>
+          <option value="local">Local (National)</option>
+          <option value="uk">United Kingdom (UK)</option>
+          <option value="wipo">International (WIPO)</option>
+        </select>
+      </FormField>
+
+      <FormField
         label="IP Name"
         error={errors.trademarkName?.message}
       >

@@ -106,4 +106,16 @@ li {
   .text-xl {
     font-size: 1.25rem;
   }
+}
+
+.about-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+@media (max-width: 768px) {
+  .about-page {
+    padding: 1rem;
+  }
 } 

@@ -1,6 +1,16 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, Settings, LayoutList, ArrowLeft } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  FileText, 
+  Users, 
+  Settings, 
+  LayoutList, 
+  ArrowLeft,
+  Calendar,
+  Scale,
+  Banknote
+} from 'lucide-react';
 
 export function useNavigation(role: 'admin' | 'applicant' | 'public' | null, loading: boolean) {
   const location = useLocation();
@@ -21,6 +31,9 @@ export function useNavigation(role: 'admin' | 'applicant' | 'public' | null, loa
         { name: 'Back to Main Menu', to: '/', icon: ArrowLeft },
         { divider: true },
         { name: 'Admin Overview', to: '/admin', icon: LayoutDashboard, end: true },
+        { name: 'Renewal Management', to: '/admin/renewals', icon: Calendar },
+        { name: 'Opposition Management', to: '/admin/oppositions', icon: Scale },
+        { name: 'Payment Verification', to: '/admin/payments', icon: Banknote },
         { name: 'Applications', to: '/admin/applications', icon: LayoutList },
         { name: 'Users', to: '/admin/users', icon: Users },
         { name: 'Settings', to: '/admin/settings', icon: Settings },

@@ -6,17 +6,25 @@ import ApplicationForm from './pages/ApplicationForm';
 import ApplicationDetails from './pages/ApplicationDetails';
 import Gazette from './pages/Gazette';
 import OppositionForm from './pages/OppositionForm';
-import Overview from './pages/AdminDashboard/components/Overview';
-import ApplicationManagement from './pages/AdminDashboard/components/ApplicationManagement';
-import UserManagement from './pages/AdminDashboard/components/UserManagement';
-import Settings from './pages/AdminDashboard/components/Settings';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './contexts/ToastContext';
 import ToastContainer from './components/ToastContainer';
+import AdminRoutes from './routes/adminRoutes';
+import { useAuth } from './hooks/useAuth';
 
 function App() {
+  const { loading: authLoading } = useAuth();
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-primary">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <ToastProvider>
       <Router>
@@ -35,10 +43,7 @@ function App() {
               <Route path="/applications/:id/oppose" element={<OppositionForm />} />
               
               {/* Admin Routes */}
-              <Route path="/admin" element={<Overview />} />
-              <Route path="/admin/applications" element={<ApplicationManagement />} />
-              <Route path="/admin/users" element={<UserManagement />} />
-              <Route path="/admin/settings" element={<Settings />} />
+              <Route path="/admin/*" element={<AdminRoutes />} />
             </Route>
           </Route>
         </Routes>

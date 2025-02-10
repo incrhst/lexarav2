@@ -6,6 +6,8 @@ import IPDetails from './steps/TrademarkDetails';
 import CopyrightDetails from './steps/CopyrightDetails';
 import PatentDetails from './steps/PatentDetails';
 import GoodsServices from './steps/GoodsServices';
+import FilingDetails from './steps/FilingDetails';
+import PaymentDetails from './steps/PaymentDetails';
 import Review from './steps/Review';
 
 interface Props {
@@ -24,6 +26,7 @@ export default function ApplicationFormStepper({
   onCancel,
 }: Props) {
   const applicationType = form.watch('applicationType');
+  const applicationSubType = form.watch('applicationSubType');
 
   const getSteps = () => {
     const baseSteps = [
@@ -31,29 +34,43 @@ export default function ApplicationFormStepper({
       { title: 'Applicant Information', component: ApplicantInfo },
     ];
 
-    switch (applicationType) {
-      case 'trademark':
-        return [
-          ...baseSteps,
-          { title: 'Trademark Details', component: IPDetails },
-          { title: 'Goods & Services', component: GoodsServices },
-          { title: 'Review & Submit', component: Review },
-        ];
-      case 'copyright':
-        return [
-          ...baseSteps,
-          { title: 'Copyright Details', component: CopyrightDetails },
-          { title: 'Review & Submit', component: Review },
-        ];
-      case 'patent':
-        return [
-          ...baseSteps,
-          { title: 'Patent Details', component: PatentDetails },
-          { title: 'Review & Submit', component: Review },
-        ];
-      default:
-        return baseSteps;
+    // For new applications, use the original step flow
+    if (!applicationSubType || applicationSubType === 'new') {
+      switch (applicationType) {
+        case 'trademark':
+          return [
+            ...baseSteps,
+            { title: 'Trademark Details', component: IPDetails },
+            { title: 'Goods & Services', component: GoodsServices },
+            { title: 'Payment', component: PaymentDetails },
+            { title: 'Review & Submit', component: Review },
+          ];
+        case 'copyright':
+          return [
+            ...baseSteps,
+            { title: 'Copyright Details', component: CopyrightDetails },
+            { title: 'Payment', component: PaymentDetails },
+            { title: 'Review & Submit', component: Review },
+          ];
+        case 'patent':
+          return [
+            ...baseSteps,
+            { title: 'Patent Details', component: PatentDetails },
+            { title: 'Payment', component: PaymentDetails },
+            { title: 'Review & Submit', component: Review },
+          ];
+        default:
+          return baseSteps;
+      }
     }
+
+    // For other filing types, use a simplified flow with FilingDetails
+    return [
+      ...baseSteps,
+      { title: 'Filing Details', component: FilingDetails },
+      { title: 'Payment', component: PaymentDetails },
+      { title: 'Review & Submit', component: Review },
+    ];
   };
 
   const steps = getSteps();

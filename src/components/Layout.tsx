@@ -7,6 +7,7 @@ import { useNavigation } from '../hooks/useNavigation';
 import UserRoleIndicator from './UserRoleIndicator';
 import Button from './Button';
 import Logo from './Logo';
+import AdminLayout from './admin/AdminLayout';
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -26,6 +27,11 @@ export default function Layout() {
         <div className="animate-pulse text-primary">Loading...</div>
       </div>
     );
+  }
+
+  // Use AdminLayout for admin routes
+  if (location.pathname.startsWith('/admin')) {
+    return <AdminLayout />;
   }
 
   return (

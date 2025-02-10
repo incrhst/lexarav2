@@ -15,12 +15,23 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Attempting to sign in with:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
+
+      if (!data.user) {
+        console.error('No user data returned');
+        throw new Error('No user data returned from authentication');
+      }
+
+      console.log('Login successful for user:', data.user.email);
 
       // Check for opposition redirect
       const oppositionRedirect = sessionStorage.getItem('oppositionRedirect');
@@ -31,7 +42,8 @@ export default function Login() {
         navigate('/');
       }
     } catch (err: any) {
-      setError(err.message);
+      console.error('Login error details:', err);
+      setError(err.message || 'Failed to sign in');
     } finally {
       setLoading(false);
     }

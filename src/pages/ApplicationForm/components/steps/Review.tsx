@@ -23,6 +23,13 @@ export default function Review({
 
   const commonSections = [
     {
+      title: 'Application Information',
+      fields: [
+        { label: 'Application Type', value: values.applicationType },
+        { label: 'Filing Type', value: values.applicationSubType },
+      ],
+    },
+    {
       title: 'Applicant Information',
       fields: [
         { label: 'Full Name', value: values.applicantName },
@@ -33,12 +40,23 @@ export default function Review({
         { label: 'Country', value: values.applicantCountry },
       ],
     },
+    {
+      title: 'Payment Information',
+      fields: [
+        { label: 'Amount', value: `£${values.paymentAmount}` },
+        { label: 'Card Number', value: `**** **** **** ${values.cardNumber.slice(-4)}` },
+        { label: 'Cardholder Name', value: values.cardholderName },
+      ],
+    },
   ];
 
   const trademarkSections = [
     {
       title: 'IP Details',
       fields: [
+        { label: 'Jurisdiction', value: values.trademarkJurisdiction === 'local' ? 'Local (National)' :
+                                      values.trademarkJurisdiction === 'uk' ? 'United Kingdom (UK)' :
+                                      values.trademarkJurisdiction === 'wipo' ? 'International (WIPO)' : '' },
         { label: 'Trademark Name', value: values.trademarkName },
         { label: 'Description', value: values.trademarkDescription },
         { label: 'Use Status', value: values.useStatus },

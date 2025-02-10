@@ -1,0 +1,933 @@
+// ==============================================
+// LEXARA IP MANAGEMENT SYSTEM - COMPLETE SOURCE CODE
+// ==============================================
+
+// ---------------------------------------------
+// Configuration Files
+// ---------------------------------------------
+
+// File: package.json
+{
+  "name": "lexara-ip",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "supabase:migration": "supabase db push"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.49.3",
+    "react-router-dom": "^6.21.3",
+    "lucide-react": "^0.320.0",
+    "zod": "^3.22.4",
+    "tailwind-merge": "^2.2.1",
+    "date-fns": "^2.30.0",
+    "@heroicons/react": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  }
+}
+
+// File: .env
+VITE_SUPABASE_URL=https://yhenfzccmpxdnngtcbaa.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZW5memNjbXB4ZG5uZ3RjYmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0NzkyNTYsImV4cCI6MjA1MTA1NTI1Nn0.CaJSrALkeplXa3wEgGjVX2dWXgcODuCSjHbgExZUz0c
+
+// File: tailwind.config.js
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          DEFAULT: '#484949',
+          light: '#525252',
+          lighter: '#636363',
+        },
+        background: {
+          DEFAULT: '#EDEAE4',
+          alt: '#EDEBE6',
+        },
+      },
+    },
+  },
+  plugins: [
+    require('@tailwindcss/forms'),
+  ],
+};
+
+// ---------------------------------------------
+// Source Code Files
+// ---------------------------------------------
+
+// File: src/main.tsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import './index.css';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
+
+// File: src/App.tsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import ApplicationForm from './pages/ApplicationForm';
+import ApplicationDetails from './pages/ApplicationDetails';
+import Gazette from './pages/Gazette';
+import OppositionForm from './pages/OppositionForm';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ProtectedRoute from './components/ProtectedRoute';
+import { ToastProvider } from './contexts/ToastContext';
+import ToastContainer from './components/ToastContainer';
+import AdminRoutes from './routes/adminRoutes';
+
+function App() {
+  return (
+    <ToastProvider>
+      <Router>
+        <ToastContainer />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/gazette" element={<Gazette />} />
+            
+            <Route element={<ProtectedRoute />}>
+              <Route path="/applications/new" element={<ApplicationForm />} />
+              <Route path="/applications/:id" element={<ApplicationDetails />} />
+              <Route path="/applications/:id/oppose" element={<OppositionForm />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/*" element={<AdminRoutes />} />
+            </Route>
+          </Route>
+        </Routes>
+      </Router>
+    </ToastProvider>
+  );
+}
+
+export default App;
+
+// File: src/lib/supabase.ts
+[Previous supabase.ts content]
+
+// File: src/services/notificationService.ts
+import { z } from 'zod';
+import { supabase } from '../lib/supabase';
+
+export const notificationTypeSchema = z.enum([
+  'status_change',
+  'payment_confirmation',
+  'document_verification',
+  'opposition_notice',
+  'registration_complete',
+  'renewal_reminder',
+  'system_update'
+]);
+
+export const notificationPrioritySchema = z.enum([
+  'low',
+  'medium',
+  'high',
+  'urgent'
+]);
+
+export const notificationSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  type: notificationTypeSchema,
+  priority: notificationPrioritySchema,
+  title: z.string(),
+  message: z.string(),
+  actionUrl: z.string().optional(),
+  actionText: z.string().optional(),
+  isRead: z.boolean(),
+  isArchived: z.boolean(),
+  metadata: z.record(z.unknown()),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  scheduledFor: z.string().optional()
+});
+
+export type Notification = z.infer<typeof notificationSchema>;
+export type NotificationType = z.infer<typeof notificationTypeSchema>;
+export type NotificationPriority = z.infer<typeof notificationPrioritySchema>;
+
+export class NotificationService {
+  [Previous NotificationService class content]
+}
+
+// File: src/hooks/useNotifications.ts
+[Previous useNotifications.ts content]
+
+// File: src/components/NotificationBell.tsx
+[Previous NotificationBell.tsx content]
+
+// File: src/components/Layout.tsx
+[Previous Layout.tsx content]
+
+// File: src/components/AdminLayout.tsx
+[Previous AdminLayout.tsx content]
+
+// File: src/routes/adminRoutes.tsx
+[Previous adminRoutes.tsx content]
+
+// File: src/pages/Dashboard/components/DashboardStats.tsx
+[Previous DashboardStats.tsx content]
+
+// File: src/pages/Dashboard/components/ApplicationList.tsx
+[Previous ApplicationList.tsx content]
+
+// File: src/pages/Dashboard/components/RecentActivity.tsx
+[Previous RecentActivity.tsx content]
+
+// ---------------------------------------------
+// Database Migrations
+// ---------------------------------------------
+
+// File: supabase/migrations/20240100000000_create_base_tables.sql
+[Previous create_base_tables.sql content]
+
+// File: supabase/migrations/20240101000000_add_ip_types.sql
+[Previous add_ip_types.sql content]
+
+// File: supabase/migrations/20240102000000_add_trademark_jurisdiction.sql
+[Previous add_trademark_jurisdiction.sql content]
+
+// File: supabase/migrations/20240201000000_add_renewal_notifications.sql
+[Previous add_renewal_notifications.sql content]
+
+// File: supabase/migrations/20240301000000_add_certificates_and_registrations.sql
+[Previous add_certificates_and_registrations.sql content]
+
+// File: supabase/migrations/20240401000000_add_notifications.sql
+-- Create notification types enum
+CREATE TYPE notification_type AS ENUM (
+  'status_change',
+  'payment_confirmation',
+  'document_verification',
+  'opposition_notice',
+  'registration_complete',
+  'renewal_reminder',
+  'system_update'
+);
+
+-- Create notification priority enum
+CREATE TYPE notification_priority AS ENUM (
+  'low',
+  'medium',
+  'high',
+  'urgent'
+);
+
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  type notification_type NOT NULL,
+  priority notification_priority DEFAULT 'medium',
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  action_url TEXT,
+  action_text TEXT,
+  is_read BOOLEAN DEFAULT false,
+  is_archived BOOLEAN DEFAULT false,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  scheduled_for TIMESTAMPTZ
+);
+
+[Previous remaining migration content]
+
+// ---------------------------------------------
+// Styles
+// ---------------------------------------------
+
+// File: src/index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[Previous index.css content]
+
+// File: src/contexts/NotificationContext.tsx
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { NotificationService, Notification, NotificationType } from '../services/notificationService';
+
+interface NotificationContextType {
+  notifications: Notification[];
+  unreadCount: number;
+  loading: boolean;
+  error: Error | null;
+  markAsRead: (notificationId: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  archiveNotification: (notificationId: string) => Promise<void>;
+  createNotification: (params: {
+    type: NotificationType;
+    title: string;
+    message: string;
+    actionUrl?: string;
+    actionText?: string;
+    metadata?: Record<string, unknown>;
+  }) => Promise<void>;
+  refresh: () => Promise<void>;
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchNotifications = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await NotificationService.getUserNotifications(user.id, {
+        limit: 50 // Fetch more initially for the context
+      });
+      setNotifications(data);
+
+      const count = await NotificationService.getUnreadCount(user.id);
+      setUnreadCount(count || 0);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch notifications'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (notificationId: string) => {
+    if (!user) return;
+
+    try {
+      await NotificationService.markAsRead(notificationId, user.id);
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === notificationId
+            ? { ...notification, isRead: true }
+            : notification
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      throw new Error('Failed to mark notification as read');
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!user) return;
+
+    try {
+      await NotificationService.markAllAsRead(user.id);
+      setNotifications(prev =>
+        prev.map(notification => ({ ...notification, isRead: true }))
+      );
+      setUnreadCount(0);
+    } catch (err) {
+      throw new Error('Failed to mark all notifications as read');
+    }
+  };
+
+  const archiveNotification = async (notificationId: string) => {
+    if (!user) return;
+
+    try {
+      await NotificationService.archiveNotification(notificationId, user.id);
+      setNotifications(prev =>
+        prev.filter(notification => notification.id !== notificationId)
+      );
+      const notification = notifications.find(n => n.id === notificationId);
+      if (notification && !notification.isRead) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (err) {
+      throw new Error('Failed to archive notification');
+    }
+  };
+
+  const createNotification = async ({
+    type,
+    title,
+    message,
+    actionUrl,
+    actionText,
+    metadata
+  }: {
+    type: NotificationType;
+    title: string;
+    message: string;
+    actionUrl?: string;
+    actionText?: string;
+    metadata?: Record<string, unknown>;
+  }) => {
+    if (!user) return;
+
+    try {
+      const notificationId = await NotificationService.createNotification({
+        userId: user.id,
+        type,
+        title,
+        message,
+        actionUrl,
+        actionText,
+        metadata
+      });
+
+      // Refresh notifications to include the new one
+      await fetchNotifications();
+    } catch (err) {
+      throw new Error('Failed to create notification');
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user]);
+
+  // Set up real-time updates (if using Supabase realtime)
+  useEffect(() => {
+    if (!user) return;
+
+    // Subscribe to notifications channel
+    const subscription = NotificationService.subscribeToNotifications(user.id, {
+      onNotification: () => {
+        fetchNotifications();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user]);
+
+  const value = {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    markAsRead,
+    markAllAsRead,
+    archiveNotification,
+    createNotification,
+    refresh: fetchNotifications
+  };
+
+  return (
+    <NotificationContext.Provider value={value}>
+      {children}
+    </NotificationContext.Provider>
+  );
+}
+
+export function useNotifications() {
+  const context = useContext(NotificationContext);
+  if (context === undefined) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
+  return context;
+}
+
+// File: src/components/NotificationCenter.tsx
+import React from 'react';
+import { useNotifications } from '../hooks/useNotifications';
+import { Bell, X, Check, Archive } from 'lucide-react';
+
+export default function NotificationCenter() {
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    markAsRead,
+    markAllAsRead,
+    archiveNotification
+  } = useNotifications();
+
+  if (loading) {
+    return <div>Loading notifications...</div>;
+  }
+
+  if (error) {
+    return <div>Error loading notifications: {error.message}</div>;
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-4 max-w-md w-full">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Notifications
+          {unreadCount > 0 && (
+            <span className="ml-2 bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full text-sm">
+              {unreadCount} new
+            </span>
+          )}
+        </h2>
+        {unreadCount > 0 && (
+          <button
+            onClick={() => markAllAsRead()}
+            className="text-sm text-indigo-600 hover:text-indigo-500"
+          >
+            Mark all as read
+          </button>
+        )}
+      </div>
+
+      <div className="divide-y divide-gray-200">
+        {notifications.length === 0 ? (
+          <div className="text-center py-6 text-gray-500">
+            No notifications
+          </div>
+        ) : (
+          notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`py-4 ${!notification.isRead ? 'bg-indigo-50' : ''}`}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">
+                    {notification.title}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {notification.message}
+                  </p>
+                  {notification.actionUrl && (
+                    <a
+                      href={notification.actionUrl}
+                      className="mt-2 text-sm text-indigo-600 hover:text-indigo-500"
+                    >
+                      {notification.actionText || 'View details'}
+                    </a>
+                  )}
+                </div>
+                <div className="ml-4 flex space-x-2">
+                  {!notification.isRead && (
+                    <button
+                      onClick={() => markAsRead(notification.id)}
+                      className="text-gray-400 hover:text-gray-500"
+                      title="Mark as read"
+                    >
+                      <Check className="h-5 w-5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => archiveNotification(notification.id)}
+                    className="text-gray-400 hover:text-gray-500"
+                    title="Archive"
+                  >
+                    <Archive className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-gray-500">
+                {new Date(notification.createdAt).toLocaleDateString()}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// File: src/components/NotificationSettings.tsx
+import React, { useState, useEffect } from 'react';
+import { NotificationService, NotificationType } from '../services/notificationService';
+import { useAuth } from '../hooks/useAuth';
+import { Switch } from '@headlessui/react';
+
+interface NotificationPreference {
+  type: NotificationType;
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  inAppEnabled: boolean;
+}
+
+export default function NotificationSettings() {
+  const { user } = useAuth();
+  const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    async function fetchPreferences() {
+      if (!user) return;
+
+      try {
+        setLoading(true);
+        const data = await NotificationService.getNotificationPreferences(user.id);
+        setPreferences(data);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to fetch preferences'));
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPreferences();
+  }, [user]);
+
+  const handleToggle = async (
+    type: NotificationType,
+    channel: 'email' | 'push' | 'inApp',
+    enabled: boolean
+  ) => {
+    if (!user) return;
+
+    try {
+      const updatedPreferences = {
+        [`${channel}Enabled`]: enabled,
+      };
+
+      await NotificationService.updateNotificationPreferences(
+        user.id,
+        type,
+        updatedPreferences
+      );
+
+      setPreferences(prev =>
+        prev.map(pref =>
+          pref.type === type
+            ? { ...pref, [`${channel}Enabled`]: enabled }
+            : pref
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to update preference'));
+    }
+  };
+
+  if (loading) {
+    return <div>Loading preferences...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <h2 className="text-lg font-medium text-gray-900 mb-4">
+        Notification Preferences
+      </h2>
+
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <div className="space-y-6">
+            {preferences.map((preference) => (
+              <div
+                key={preference.type}
+                className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-4 sm:items-center justify-between"
+              >
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900">
+                    {preference.type.replace(/_/g, ' ')}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Choose how you want to receive these notifications
+                  </p>
+                </div>
+
+                <div className="flex space-x-4">
+                  <div className="flex items-center">
+                    <Switch
+                      checked={preference.emailEnabled}
+                      onChange={(enabled) =>
+                        handleToggle(preference.type, 'email', enabled)
+                      }
+                      className={`${
+                        preference.emailEnabled ? 'bg-indigo-600' : 'bg-gray-200'
+                      } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+                    >
+                      <span className="sr-only">Enable email notifications</span>
+                      <span
+                        className={`${
+                          preference.emailEnabled ? 'translate-x-5' : 'translate-x-0'
+                        } pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                      />
+                    </Switch>
+                    <span className="ml-2 text-sm text-gray-500">Email</span>
+                  </div>
+
+                  <div className="flex items-center">
+                    <Switch
+                      checked={preference.pushEnabled}
+                      onChange={(enabled) =>
+                        handleToggle(preference.type, 'push', enabled)
+                      }
+                      className={`${
+                        preference.pushEnabled ? 'bg-indigo-600' : 'bg-gray-200'
+                      } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+                    >
+                      <span className="sr-only">Enable push notifications</span>
+                      <span
+                        className={`${
+                          preference.pushEnabled ? 'translate-x-5' : 'translate-x-0'
+                        } pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                      />
+                    </Switch>
+                    <span className="ml-2 text-sm text-gray-500">Push</span>
+                  </div>
+
+                  <div className="flex items-center">
+                    <Switch
+                      checked={preference.inAppEnabled}
+                      onChange={(enabled) =>
+                        handleToggle(preference.type, 'inApp', enabled)
+                      }
+                      className={`${
+                        preference.inAppEnabled ? 'bg-indigo-600' : 'bg-gray-200'
+                      } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+                    >
+                      <span className="sr-only">Enable in-app notifications</span>
+                      <span
+                        className={`${
+                          preference.inAppEnabled ? 'translate-x-5' : 'translate-x-0'
+                        } pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                      />
+                    </Switch>
+                    <span className="ml-2 text-sm text-gray-500">In-app</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// File: src/pages/settings/NotificationSettings.tsx
+import React from 'react';
+import NotificationSettings from '../../components/NotificationSettings';
+
+export default function NotificationSettingsPage() {
+  return (
+    <div className="py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 className="text-2xl font-semibold text-gray-900">Notification Settings</h1>
+        <div className="mt-6">
+          <NotificationSettings />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// File: src/utils/notifications.ts
+import { NotificationType, NotificationPriority } from '../services/notificationService';
+
+export const getNotificationIcon = (type: NotificationType) => {
+  switch (type) {
+    case 'status_change':
+      return 'RefreshCw';
+    case 'payment_confirmation':
+      return 'CreditCard';
+    case 'document_verification':
+      return 'FileCheck';
+    case 'opposition_notice':
+      return 'AlertTriangle';
+    case 'registration_complete':
+      return 'CheckCircle';
+    case 'renewal_reminder':
+      return 'Clock';
+    case 'system_update':
+      return 'Bell';
+    default:
+      return 'Bell';
+  }
+};
+
+export const getNotificationColor = (priority: NotificationPriority) => {
+  switch (priority) {
+    case 'urgent':
+      return 'text-red-600 bg-red-100';
+    case 'high':
+      return 'text-orange-600 bg-orange-100';
+    case 'medium':
+      return 'text-yellow-600 bg-yellow-100';
+    case 'low':
+      return 'text-blue-600 bg-blue-100';
+    default:
+      return 'text-gray-600 bg-gray-100';
+  }
+};
+
+export const formatNotificationTimestamp = (timestamp: string) => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (minutes < 60) {
+    return `${minutes} minutes ago`;
+  } else if (hours < 24) {
+    return `${hours} hours ago`;
+  } else if (days < 7) {
+    return `${days} days ago`;
+  } else {
+    return date.toLocaleDateString();
+  }
+};
+
+// File: src/components/notifications/NotificationList.tsx
+import React from 'react';
+import { Notification } from '../../services/notificationService';
+import { getNotificationIcon, getNotificationColor, formatNotificationTimestamp } from '../../utils/notifications';
+import * as Icons from 'lucide-react';
+
+interface NotificationListProps {
+  notifications: Notification[];
+  onMarkAsRead: (id: string) => void;
+  onArchive: (id: string) => void;
+}
+
+export default function NotificationList({
+  notifications,
+  onMarkAsRead,
+  onArchive,
+}: NotificationListProps) {
+  return (
+    <div className="divide-y divide-gray-200">
+      {notifications.map((notification) => {
+        const IconComponent = Icons[getNotificationIcon(notification.type) as keyof typeof Icons];
+        const colorClasses = getNotificationColor(notification.priority);
+
+        return (
+          <div
+            key={notification.id}
+            className={`p-4 ${!notification.isRead ? 'bg-indigo-50' : ''}`}
+          >
+            <div className="flex items-start space-x-4">
+              <div className={`rounded-full p-2 ${colorClasses}`}>
+                <IconComponent className="h-5 w-5" />
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-gray-900">
+                    {notification.title}
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    {!notification.isRead && (
+                      <button
+                        onClick={() => onMarkAsRead(notification.id)}
+                        className="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
+                      >
+                        Mark as read
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onArchive(notification.id)}
+                      className="text-gray-400 hover:text-gray-500"
+                    >
+                      <Icons.Archive className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                
+                <p className="mt-1 text-sm text-gray-500">
+                  {notification.message}
+                </p>
+                
+                {notification.actionUrl && (
+                  <a
+                    href={notification.actionUrl}
+                    className="mt-2 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                  >
+                    {notification.actionText || 'View details'}
+                    <Icons.ArrowRight className="ml-1 h-4 w-4" />
+                  </a>
+                )}
+                
+                <p className="mt-2 text-xs text-gray-500">
+                  {formatNotificationTimestamp(notification.createdAt)}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// File: src/components/notifications/NotificationBadge.tsx
+import React from 'react';
+import { NotificationPriority } from '../../services/notificationService';
+import { getNotificationColor } from '../../utils/notifications';
+
+interface NotificationBadgeProps {
+  count: number;
+  priority?: NotificationPriority;
+}
+
+export default function NotificationBadge({
+  count,
+  priority = 'medium'
+}: NotificationBadgeProps) {
+  if (count === 0) return null;
+
+  const colorClasses = getNotificationColor(priority);
+
+  return (
+    <span className={`inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full ${colorClasses}`}>
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
+
+[Continue with other components...] 
