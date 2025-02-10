@@ -1,44 +1,59 @@
-const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
-);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from the root .env file
+dotenv.config({ path: join(__dirname, '../../.env') });
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase environment variables');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function setupAgent() {
   try {
-    // Create agent user
-    const { data: user, error: signUpError } = await supabase.auth.signUp({
+    console.log('Creating agent user...');
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: 'agent@lexara.com',
       password: 'Agent123!',
-      options: {
-        data: {
-          role: 'agent'
-        }
-      }
     });
 
-    if (signUpError) throw signUpError;
-    
-    // Insert into user_roles table
+    if (authError) {
+      throw authError;
+    }
+
+    if (!authData.user) {
+      throw new Error('No user data returned');
+    }
+
+    console.log('Agent user created successfully');
+    console.log('Adding agent role...');
+
     const { error: roleError } = await supabase
       .from('user_roles')
-      .insert([
-        {
-          user_id: user.user.id,
-          role: 'agent'
-        }
-      ]);
+      .insert([{ user_id: authData.user.id, role: 'agent' }]);
 
-    if (roleError) throw roleError;
+    if (roleError) {
+      throw roleError;
+    }
 
-    console.log('Agent user created successfully!');
+    console.log('Agent role added successfully');
+    console.log('Setup completed successfully!');
+    console.log('\nAgent Credentials:');
     console.log('Email: agent@lexara.com');
     console.log('Password: Agent123!');
-    
   } catch (error) {
-    console.error('Error setting up agent:', error.message);
+    console.error('Error during setup:', error);
+    process.exit(1);
   }
 }
 
