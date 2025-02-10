@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { ButtonHTMLAttributes } from 'react';
 import { cn } from '../utils/cn';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary';
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
 }
@@ -12,24 +12,24 @@ export default function Button({
   className,
   variant = 'primary',
   size = 'md',
-  isLoading,
+  isLoading = false,
   disabled,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-md transition-colors';
-  
+  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+
   const variants = {
-    primary: 'bg-primary text-background hover:bg-primary-light focus:ring-2 focus:ring-primary-lighter focus:ring-offset-2',
-    secondary: 'bg-background-alt text-primary border border-primary hover:bg-background focus:ring-2 focus:ring-primary focus:ring-offset-2',
+    primary: 'bg-primary text-white hover:bg-primary/90 focus:ring-primary/50',
+    secondary: 'bg-primary/10 text-primary hover:bg-primary/20 focus:ring-primary/30',
+    ghost: 'text-primary hover:bg-primary/10 focus:ring-primary/30',
+    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500/50',
   };
 
   const sizes = {
     sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base',
+    md: 'px-4 py-2 text-base',
+    lg: 'px-6 py-3 text-lg',
   };
-
-  const isDisabled = disabled || isLoading;
 
   return (
     <button
@@ -37,16 +37,28 @@ export default function Button({
         baseStyles,
         variants[variant],
         sizes[size],
-        isDisabled && 'opacity-50 cursor-not-allowed',
+        isLoading && 'opacity-50 cursor-wait',
         className
       )}
-      disabled={isDisabled}
+      disabled={disabled || isLoading}
       {...props}
     >
       {isLoading ? (
         <>
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <svg
+            className="animate-spin -ml-1 mr-2 h-4 w-4"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
             <path
               className="opacity-75"
               fill="currentColor"

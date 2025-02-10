@@ -1,163 +1,77 @@
 import React from 'react';
-import { format } from 'date-fns';
-import { ChevronRight } from 'lucide-react';
-
-interface Application {
-  id: string;
-  title: string;
-  type: 'trademark' | 'patent';
-  status: string;
-  reference: string;
-  submissionDate: string;
-  jurisdiction: string;
-  lastUpdated: string;
-  nextDeadline?: string;
-  description?: string;
-  logo?: string;
-}
+import { FileText, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Application } from '../../hooks/useApplications';
 
 interface ApplicationListProps {
   applications: Application[];
-  onView?: (id: string) => void;
-  sortConfig?: {
-    key: keyof Application;
-    direction: 'asc' | 'desc';
-  };
-  onSort?: (key: keyof Application) => void;
+  onView: (id: string) => void;
 }
 
-export default function ApplicationList({
-  applications,
-  onView,
-  sortConfig,
-  onSort,
-}: ApplicationListProps) {
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'registered':
-        return 'bg-green-100 text-green-800';
-      case 'expired':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+const statusIcons = {
+  draft: Clock,
+  pending: AlertCircle,
+  active: FileText,
+  completed: CheckCircle,
+  rejected: AlertCircle,
+};
 
-  const getSortIcon = (key: keyof Application) => {
-    if (sortConfig?.key !== key) return null;
-    return sortConfig.direction === 'asc' ? '↑' : '↓';
-  };
+const statusColors = {
+  draft: 'text-gray-500',
+  pending: 'text-yellow-500',
+  active: 'text-blue-500',
+  completed: 'text-green-500',
+  rejected: 'text-red-500',
+};
+
+export default function ApplicationList({ applications, onView }: ApplicationListProps) {
+  if (!applications.length) {
+    return (
+      <div className="text-center py-8 text-primary-light">
+        No applications found
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => onSort?.('title')}
-            >
-              Title/Reference {getSortIcon('title')}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => onSort?.('type')}
-            >
-              Type {getSortIcon('type')}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => onSort?.('status')}
-            >
-              Status {getSortIcon('status')}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => onSort?.('jurisdiction')}
-            >
-              Jurisdiction {getSortIcon('jurisdiction')}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => onSort?.('submissionDate')}
-            >
-              Filed {getSortIcon('submissionDate')}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-              onClick={() => onSort?.('nextDeadline')}
-            >
-              Next Deadline {getSortIcon('nextDeadline')}
-            </th>
-            <th scope="col" className="relative px-6 py-3">
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {applications.map((application) => (
-            <tr
-              key={application.id}
-              className="hover:bg-gray-50 transition-colors duration-150"
-            >
-              <td className="px-6 py-4">
-                <div className="flex items-center">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{application.title}</div>
-                    <div className="text-sm text-gray-500">{application.reference}</div>
-                  </div>
+    <div className="space-y-4">
+      {applications.map((application) => {
+        const StatusIcon = statusIcons[application.status];
+        const statusColor = statusColors[application.status];
+
+        return (
+          <div
+            key={application.id}
+            className="bg-background-alt p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => onView(application.id)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className={`p-2 rounded-full ${statusColor} bg-opacity-10`}>
+                  <StatusIcon className={`h-5 w-5 ${statusColor}`} />
                 </div>
-              </td>
-              <td className="px-6 py-4">
-                <span className="text-sm text-gray-900 capitalize">{application.type}</span>
-              </td>
-              <td className="px-6 py-4">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                    application.status
-                  )}`}
-                >
-                  {application.status}
-                </span>
-              </td>
-              <td className="px-6 py-4">
-                <span className="text-sm text-gray-900">{application.jurisdiction}</span>
-              </td>
-              <td className="px-6 py-4">
-                <span className="text-sm text-gray-900">
-                  {format(new Date(application.submissionDate), 'MMM d, yyyy')}
-                </span>
-              </td>
-              <td className="px-6 py-4">
-                {application.nextDeadline ? (
-                  <span className="text-sm text-orange-600">
-                    {format(new Date(application.nextDeadline), 'MMM d, yyyy')}
-                  </span>
-                ) : (
-                  <span className="text-sm text-gray-500">-</span>
-                )}
-              </td>
-              <td className="px-6 py-4 text-right text-sm font-medium">
-                <button
-                  onClick={() => onView?.(application.id)}
-                  className="text-indigo-600 hover:text-indigo-900 inline-flex items-center"
-                >
-                  View
-                  <ChevronRight className="ml-1 w-4 h-4" />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                <div>
+                  <h3 className="font-medium text-primary">
+                    {application.title}
+                  </h3>
+                  <p className="text-sm text-primary-light">
+                    {application.application_number || 'Draft'}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium text-primary">
+                  {application.type.charAt(0).toUpperCase() + application.type.slice(1)}
+                </p>
+                <p className="text-sm text-primary-light">
+                  {application.filing_date
+                    ? new Date(application.filing_date).toLocaleDateString()
+                    : 'Not filed'}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 } 
