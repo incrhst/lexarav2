@@ -252,20 +252,21 @@ export function useApplicationForm() {
     if (!type) return 2;
 
     // For new applications, use the original step count
-    if (subType === 'new') {
+    if (!subType || subType === 'new') {
       switch (type) {
         case 'trademark':
-          return 5; // Including payment step
+          return 6; // Type, Applicant, Trademark, Goods, Payment, Review
         case 'copyright':
+          return 5; // Type, Applicant, Copyright, Payment, Review
         case 'patent':
-          return 4; // Including payment step
+          return 5; // Type, Applicant, Patent, Payment, Review
         default:
           return 2;
       }
     }
 
-    // For other filing types, we typically need fewer steps
-    return 4; // Type selection, Applicant Info, Filing Details, and Payment
+    // For other filing types, we need 5 steps
+    return 5; // Type, Applicant, Filing Details, Payment, Review
   };
 
   return {

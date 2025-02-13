@@ -133,6 +133,9 @@ export default function PaymentDetails({
       calculation.penalties.reduce((sum, penalty) => sum + penalty.amount, 0);
 
     setFeeCalculation(calculation);
+    
+    // Set the payment amount in the form data
+    form.setValue('paymentAmount', calculation.total);
   };
 
   return (
@@ -181,12 +184,13 @@ export default function PaymentDetails({
               {...register('cardNumber', { 
                 required: 'Card number is required',
                 pattern: {
-                  value: /^[0-9]{16}$/,
-                  message: 'Please enter a valid 16-digit card number'
+                  value: /^\d{16}$/,
+                  message: 'Card number must be 16 digits'
                 }
               })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               placeholder="1234 5678 9012 3456"
+              maxLength={16}
             />
           </FormField>
 
@@ -198,14 +202,11 @@ export default function PaymentDetails({
               <input
                 type="text"
                 {...register('expiryDate', { 
-                  required: 'Expiry date is required',
-                  pattern: {
-                    value: /^(0[1-9]|1[0-2])\/([0-9]{2})$/,
-                    message: 'Please enter a valid expiry date (MM/YY)'
-                  }
+                  required: 'Expiry date is required'
                 })}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 placeholder="MM/YY"
+                maxLength={5}
               />
             </FormField>
 
@@ -216,14 +217,11 @@ export default function PaymentDetails({
               <input
                 type="text"
                 {...register('cvv', { 
-                  required: 'CVV is required',
-                  pattern: {
-                    value: /^[0-9]{3,4}$/,
-                    message: 'Please enter a valid CVV'
-                  }
+                  required: 'CVV is required'
                 })}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 placeholder="123"
+                maxLength={4}
               />
             </FormField>
           </div>
@@ -234,7 +232,9 @@ export default function PaymentDetails({
           >
             <input
               type="text"
-              {...register('cardholderName', { required: 'Cardholder name is required' })}
+              {...register('cardholderName', { 
+                required: 'Cardholder name is required'
+              })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               placeholder="John Smith"
             />
@@ -246,6 +246,7 @@ export default function PaymentDetails({
         onCancel={onCancel}
         isLoading={isLoading}
         isLastStep={isLastStep}
+        submitDisabled={Object.keys(errors).length > 0 || !feeCalculation.total}
       />
     </form>
   );
