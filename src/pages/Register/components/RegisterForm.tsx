@@ -31,8 +31,14 @@ export default function RegisterForm({ onSuccess }: Props) {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      await registerUser(data);
-      onSuccess();
+      const result = await registerUser(data);
+      if (result.user) {
+        showToast(
+          'Registration successful! Please check your email to confirm your account.',
+          'success'
+        );
+        onSuccess();
+      }
     } catch (error) {
       if (error instanceof Error) {
         showToast(error.message, 'error');
@@ -51,7 +57,7 @@ export default function RegisterForm({ onSuccess }: Props) {
         <input
           type="text"
           {...register('fullName')}
-          className="mt-1 block w-full h-12 px-4 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-base"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           placeholder="Enter your full name"
         />
       </FormField>
@@ -63,7 +69,7 @@ export default function RegisterForm({ onSuccess }: Props) {
         <input
           type="email"
           {...register('email')}
-          className="mt-1 block w-full h-12 px-4 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-base"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           placeholder="Enter your email"
         />
       </FormField>
@@ -75,7 +81,7 @@ export default function RegisterForm({ onSuccess }: Props) {
         <input
           type="password"
           {...register('password')}
-          className="mt-1 block w-full h-12 px-4 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-base"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           placeholder="Choose a password"
         />
       </FormField>
@@ -83,10 +89,15 @@ export default function RegisterForm({ onSuccess }: Props) {
       <Button
         type="submit"
         isLoading={isSubmitting}
+        variant="primary"
         className="w-full"
       >
         Create account
       </Button>
+
+      <p className="mt-2 text-sm text-gray-500 text-center">
+        After registration, you'll need to confirm your email address before signing in.
+      </p>
     </form>
   );
 }

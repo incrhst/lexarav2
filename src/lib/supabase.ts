@@ -20,41 +20,42 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
 export async function testSupabaseConnection() {
   console.log('Testing Supabase connection...');
   console.log('URL:', supabaseUrl);
-  console.log('Key exists:', !!supabaseKey);
+  console.log('Key (first 10 chars):', supabaseKey.substring(0, 10) + '...');
   
   try {
-    // First test basic connection
-    const { data: userData, error: userError } = await supabase
-      .from('user_roles')
+    // Test auth service first
+    const { data: authData, error: authError } = await supabase.auth.getSession();
+    
+    if (authError) {
+      console.error('Auth service test error:', authError.message);
+      return false;
+    }
+    console.log('✅ Auth service connection successful');
+
+    // Test profiles table
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
       .select('*')
       .limit(1);
 
-    if (userError) {
-      console.error('Initial connection test error:', userError.message);
-      if (userError.message.includes('authentication')) {
-        console.error('❌ Authentication failed. Check your SUPABASE_ANON_KEY');
-      } else if (userError.message.includes('does not exist')) {
-        console.error('❌ User roles table not found. Run the migrations first.');
-      }
+    if (profilesError) {
+      console.error('Profiles table test error:', profilesError.message);
       return false;
     }
+    console.log('✅ Profiles table accessible');
 
-    // Then test applications table
-    const { data, error } = await supabase
+    // Test applications table
+    const { data: applicationsData, error: applicationsError } = await supabase
       .from('applications')
-      .select('count')
-      .single();
+      .select('*')
+      .limit(1);
 
-    if (error) {
-      console.error('Applications table test error:', error.message);
-      if (error.message.includes('does not exist')) {
-        console.error('❌ Applications table not found. Run the migrations first.');
-      }
+    if (applicationsError) {
+      console.error('Applications table test error:', applicationsError.message);
       return false;
     }
+    console.log('✅ Applications table accessible');
 
-    console.log('✅ Supabase connection successful!');
-    console.log('✅ Database tables exist and are accessible');
     return true;
   } catch (err) {
     console.error('Unexpected error during connection test:', err);

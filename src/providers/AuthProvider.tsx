@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Navigate, useLocation } from 'react-router-dom';
 
 interface AuthContextType {
-  user: any;
+  user: User | null;
   loading: boolean;
   error?: Error;
   role: string | null;
@@ -15,14 +15,14 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const auth = useAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error>();
 
-  const role = auth.user && auth.user.user_metadata && auth.user.user_metadata.role
-    ? auth.user.user_metadata.role
-    : null;
+  const role = user?.user_metadata?.role ?? null;
 
   const updateProfile = async (profileData: any) => {
-    const { data, error } = await supabase.auth.update({ data: profileData });
+    const { data, error } = await supabase.auth.updateUser({ data: profileData });
     if (error) {
       throw error;
     }
@@ -38,15 +38,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    console.log('AuthProvider mounted');
-    console.log('Auth state:', {
-      user: auth.user ? 'Logged in' : 'Not logged in',
-      loading: auth.loading,
-      role
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
-  }, [auth.user, auth.loading, role]);
 
-  if (auth.loading) {
+    // Listen for changes on auth state (logged in, signed out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-primary">Loading authentication...</div>
@@ -54,8 +61,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const value = {
+    user,
+    loading,
+    error,
+    role,
+    updateProfile,
+    hasRole
+  };
+
   return (
-    <AuthContext.Provider value={{ ...auth, role, updateProfile, hasRole }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

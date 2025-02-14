@@ -12,14 +12,30 @@ interface ToastContextType {
   hideToast: (id: number) => void;
 }
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
+const defaultContext: ToastContextType = {
+  toasts: [],
+  showToast: () => {},
+  hideToast: () => {},
+};
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
+const ToastContext = createContext<ToastContextType>(defaultContext);
+
+interface ToastProviderProps {
+  children: React.ReactNode;
+}
+
+export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 5000);
+    
     return id;
   }, []);
 
@@ -27,8 +43,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
 
+  const value = {
+    toasts,
+    showToast,
+    hideToast,
+  };
+
   return (
-    <ToastContext.Provider value={{ toasts, showToast, hideToast }}>
+    <ToastContext.Provider value={value}>
       {children}
     </ToastContext.Provider>
   );
@@ -36,7 +58,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 export function useToast() {
   const context = useContext(ToastContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useToast must be used within a ToastProvider');
   }
   return context;

@@ -19,9 +19,9 @@ export default function Button({
   const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
-    primary: 'bg-primary text-white hover:bg-primary/90 focus:ring-primary/50',
-    secondary: 'bg-primary/10 text-primary hover:bg-primary/20 focus:ring-primary/30',
-    ghost: 'text-primary hover:bg-primary/10 focus:ring-primary/30',
+    primary: 'bg-primary-DEFAULT text-white hover:bg-primary-light focus:ring-primary-lighter/50',
+    secondary: 'bg-primary-lighter/10 text-primary-DEFAULT hover:bg-primary-lighter/20 focus:ring-primary-lighter/30',
+    ghost: 'text-primary-DEFAULT hover:bg-primary-lighter/10 focus:ring-primary-lighter/30',
     danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500/50',
   };
 

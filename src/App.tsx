@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import ApplicationForm from './pages/ApplicationForm';
@@ -15,71 +15,42 @@ import { ToastProvider } from './contexts/ToastContext';
 import ToastContainer from './components/ToastContainer';
 import AdminRoutes from './routes/adminRoutes';
 import AgentRoutes from './routes/agentRoutes';
-import { useAuth } from './hooks/useAuth';
-import { useUserRole } from './hooks/useUserRole';
+import { AuthProvider } from './providers/AuthProvider';
 
-function App() {
-  const { loading: authLoading } = useAuth();
-  const { role, loading: roleLoading } = useUserRole();
-
-  if (authLoading || roleLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-primary">Loading...</div>
-      </div>
-    );
-  }
-
+const App: React.FC = () => {
   return (
-    <ToastProvider>
-      <Router>
-        <ToastContainer />
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/agent/login" element={<AgentLogin />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* Layout wrapper */}
-          <Route element={<Layout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/gazette" element={<Gazette />} />
-            
-            {/* Protected routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/applications/new" element={<ApplicationForm />} />
-              <Route path="/applications/:id" element={<ApplicationDetails />} />
-              <Route path="/applications/:id/oppose" element={<OppositionForm />} />
+    <Router>
+      <ToastProvider>
+        <AuthProvider>
+          <div className="app">
+            <ToastContainer />
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/agent/login" element={<AgentLogin />} />
+              <Route path="/register" element={<Register />} />
               
-              {/* Role-based routes */}
-              <Route
-                path="/admin/*"
-                element={
-                  role === 'admin' ? (
-                    <AdminRoutes />
-                  ) : (
-                    <Navigate to="/admin/login" replace />
-                  )
-                }
-              />
-              
-              <Route
-                path="/agent/*"
-                element={
-                  role === 'agent' ? (
-                    <AgentRoutes />
-                  ) : (
-                    <Navigate to="/agent/login" replace />
-                  )
-                }
-              />
-            </Route>
-          </Route>
-        </Routes>
-      </Router>
-    </ToastProvider>
+              {/* Layout wrapper */}
+              <Route element={<Layout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/gazette" element={<Gazette />} />
+                
+                {/* Protected routes */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/applications/new" element={<ApplicationForm />} />
+                  <Route path="/applications/:id" element={<ApplicationDetails />} />
+                  <Route path="/applications/:id/oppose" element={<OppositionForm />} />
+                  <Route path="/admin/*" element={<AdminRoutes />} />
+                  <Route path="/agent/*" element={<AgentRoutes />} />
+                </Route>
+              </Route>
+            </Routes>
+          </div>
+        </AuthProvider>
+      </ToastProvider>
+    </Router>
   );
-}
+};
 
 export default App;
