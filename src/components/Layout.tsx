@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { LogOut, LogIn, LucideIcon } from 'lucide-react';
 import { useAuthContext } from '../providers/AuthProvider';
@@ -33,10 +33,6 @@ export default function Layout() {
     if (item.action) {
       try {
         await item.action();
-        // After sign out, force a re-render by navigating
-        if (item.name === 'Sign Out') {
-          navigate('/login', { replace: true });
-        }
       } catch (error) {
         console.error('Error executing navigation action:', error);
       }
@@ -55,6 +51,11 @@ export default function Layout() {
   if (user && !loading && location.pathname === '/login') {
     console.log('User detected on login page, redirecting to home');
     return <Navigate to="/" replace />;
+  }
+
+  // Don't render layout on login page
+  if (location.pathname === '/login') {
+    return <Outlet />;
   }
 
   return (
@@ -99,15 +100,9 @@ export default function Layout() {
 
         {/* Main Content */}
         <div className="flex-1">
-          {loading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="animate-pulse text-primary">Loading authentication...</div>
-            </div>
-          ) : (
-            <main className="p-8">
-              <Outlet />
-            </main>
-          )}
+          <main className="p-8">
+            <Outlet />
+          </main>
         </div>
       </div>
     </div>

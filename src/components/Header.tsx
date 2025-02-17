@@ -1,14 +1,12 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Search, LogOut, User, LogIn } from 'lucide-react';
 import { useAuthContext } from '../providers/AuthProvider';
 import UserRoleIndicator from './UserRoleIndicator';
 import Button from './Button';
 import Logo from './Logo';
-import { UserRole } from '../types';
 
 export default function Header() {
-  const navigate = useNavigate();
   const { user, role, signOut } = useAuthContext();
 
   console.log('Header rendering with:', { user, role });
@@ -31,7 +29,7 @@ export default function Header() {
       
       <div className="flex items-center gap-4">
         {user && role && role !== 'public' && (
-          <UserRoleIndicator role={role as UserRole} />
+          <UserRoleIndicator role={role} />
         )}
         
         <button
@@ -41,7 +39,7 @@ export default function Header() {
           <Search className="h-6 w-6" />
         </button>
 
-        {user && role && role !== 'public' ? (
+        {user ? (
           <>
             <Link
               to="/profile"
