@@ -15,19 +15,28 @@ function createSupabaseClient(): SupabaseClient<Database> {
     throw new Error('Missing Supabase environment variables');
   }
 
-  return createClient<Database>(supabaseUrl, supabaseKey, {
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+
+  const client = createClient<Database>(supabaseUrl, supabaseKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
-      storageKey: 'lexara-auth-token' // Unique storage key to prevent conflicts
+      storageKey: 'lexara-auth-token', // Unique storage key to prevent conflicts
+      flowType: 'pkce' // Use PKCE flow for better security
     },
     global: {
       headers: {
-        'x-my-custom-header': 'my-app-name'
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
       }
     }
   });
+
+  supabaseInstance = client;
+  return client;
 }
 
 // Create service role client for admin operations
@@ -37,43 +46,40 @@ function createSupabaseAdminClient(): SupabaseClient<Database> | null {
     return null;
   }
 
-  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  if (supabaseAdminInstance) {
+    return supabaseAdminInstance;
+  }
+
+  const client = createClient<Database>(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
-      storageKey: 'lexara-admin-token' // Unique storage key for admin client
+      storageKey: 'lexara-admin-token', // Unique storage key for admin client
+      flowType: 'pkce' // Use PKCE flow for better security
     },
     global: {
       headers: {
-        'x-my-custom-header': 'my-app-name-admin'
+        'apikey': supabaseServiceKey,
+        'Authorization': `Bearer ${supabaseServiceKey}`
       }
     }
   });
+
+  supabaseAdminInstance = client;
+  return client;
 }
 
-// Get or create the Supabase client instance
-export const supabase = (() => {
-  if (!supabaseInstance) {
-    supabaseInstance = createSupabaseClient();
-  }
-  return supabaseInstance;
-})();
-
-// Get or create the Supabase admin client instance
-export const supabaseAdmin = (() => {
-  if (!supabaseAdminInstance) {
-    supabaseAdminInstance = createSupabaseAdminClient();
-  }
-  return supabaseAdminInstance;
-})();
+// Initialize clients
+export const supabase = createSupabaseClient();
+export const supabaseAdmin = createSupabaseAdminClient();
 
 // Ensure supabase is not null before using it
 if (!supabase) {
   throw new Error('Failed to initialize Supabase client');
 }
 
-// Add debug logging
-supabase.auth.onAuthStateChange((event, session) => {
+// Add debug logging with more detailed error handling
+supabase.auth.onAuthStateChange(async (event, session) => {
   console.log('Supabase Auth State Change:', { event, session });
   
   if (session) {
@@ -83,6 +89,9 @@ supabase.auth.onAuthStateChange((event, session) => {
     try {
       const decoded = JSON.parse(atob(token.split('.')[1]));
       console.log('Decoded JWT:', decoded);
+      
+      // The client automatically updates its auth header when the session changes
+      // No need to manually update headers
     } catch (error) {
       console.error('Error decoding JWT:', error);
     }
