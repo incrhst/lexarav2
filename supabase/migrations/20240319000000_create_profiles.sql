@@ -33,23 +33,29 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies
 DROP POLICY IF EXISTS "Allow all operations" ON public.profiles;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.profiles;
+DROP POLICY IF EXISTS "Enable insert for authenticated users" ON public.profiles;
+DROP POLICY IF EXISTS "Enable update for users" ON public.profiles;
 
 -- Create policies for authenticated users
 CREATE POLICY "Enable read access for authenticated users"
   ON public.profiles FOR SELECT
-  TO authenticated
-  USING (auth.uid() = id);
+  USING (true);
 
 CREATE POLICY "Enable insert for authenticated users"
   ON public.profiles FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = id);
+  WITH CHECK (auth.uid() = id OR auth.role() = 'service_role');
 
 CREATE POLICY "Enable update for users"
   ON public.profiles FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
+  USING (auth.uid() = id OR auth.role() = 'service_role')
+  WITH CHECK (auth.uid() = id OR auth.role() = 'service_role');
+
+-- Create policy for service role
+CREATE POLICY "Enable all operations for service role"
+  ON public.profiles FOR ALL
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 
 -- Create indexes if they don't exist
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);

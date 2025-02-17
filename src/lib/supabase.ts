@@ -29,7 +29,10 @@ function createSupabaseClient(): SupabaseClient<Database> {
     },
     global: {
       headers: {
-        'apikey': supabaseKey
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
       }
     }
   });
@@ -57,7 +60,10 @@ function createSupabaseAdminClient(): SupabaseClient<Database> | null {
     },
     global: {
       headers: {
-        'apikey': supabaseServiceKey
+        'apikey': supabaseServiceKey,
+        'Authorization': `Bearer ${supabaseServiceKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
       }
     }
   });
