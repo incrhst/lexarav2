@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
+import { User, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Navigate, useLocation } from 'react-router-dom';
 
@@ -255,11 +255,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
 
     // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session) => {
       if (!mounted) return;
 
       console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
-      setLoading(true);
       
       try {
         switch (event) {
@@ -269,12 +268,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setRole('public');
             setShouldRedirect(true);
             setLoading(false);
+            // Force reload to clear any cached state
+            window.location.href = '/login';
             break;
             
           case 'SIGNED_IN':
             if (session) {
               console.log('User signed in:', session.user);
               setUser(session.user);
+              setShouldRedirect(false);
               
               // Set a timeout for profile/role fetching
               const profileTimeout = setTimeout(() => {
@@ -300,6 +302,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (session?.user) {
               console.log('Session exists:', session.user);
               setUser(session.user);
+              setShouldRedirect(false);
               
               const profileTimeout = setTimeout(() => {
                 if (mounted) {
