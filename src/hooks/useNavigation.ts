@@ -47,6 +47,12 @@ export function useNavigation(role: string | null, loading: boolean): Navigation
     ];
   }
 
+  // Ensure we have a valid role
+  const validRoles = ['admin', 'processor', 'user', 'agent', 'public', 'applicant'];
+  const currentRole = validRoles.includes(role || '') ? role : 'public';
+
+  console.log('Using role for navigation:', currentRole);
+
   const baseNavigation: NavigationItem[] = [
     { name: 'Home', to: '/', icon: Home, end: true },
   ];
@@ -87,13 +93,15 @@ export function useNavigation(role: string | null, loading: boolean): Navigation
 
   const publicNavigation: NavigationItem[] = [
     ...baseNavigation,
+    { divider: true },
+    { name: 'Sign In', to: '/login', icon: LogIn, end: true }
   ];
 
   let navigation: NavigationItem[] = [];
 
-  console.log('Selecting navigation for role:', role);
+  console.log('Selecting navigation for role:', currentRole);
 
-  switch (role) {
+  switch (currentRole) {
     case 'admin':
       navigation = adminNavigation;
       break;
@@ -106,12 +114,14 @@ export function useNavigation(role: string | null, loading: boolean): Navigation
     case 'agent':
       navigation = agentNavigation;
       break;
+    case 'public':
     default:
       navigation = publicNavigation;
+      break;
   }
 
   // Add sign out button if user is authenticated
-  if (user) {
+  if (user && currentRole !== 'public') {
     navigation.push({ divider: true });
     navigation.push({
       name: 'Sign Out',
