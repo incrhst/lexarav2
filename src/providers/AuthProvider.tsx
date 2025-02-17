@@ -25,117 +25,104 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
   console.log('Starting getOrCreateProfile for user:', user.id);
   
   try {
-    // First try to get the profile with timeout
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-    );
-
-    const fetchPromise = supabase
+    // First try to get the profile
+    console.log('Fetching profile...');
+    const { data: profile, error: fetchError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    console.log('Fetching profile...');
-    const { data: profile, error: fetchError } = await Promise.race([
-      fetchPromise,
-      timeoutPromise
-    ]) as any;
-
-    console.log('Profile fetch complete:', { profile, fetchError });
+    console.log('Profile fetch result:', { profile, fetchError });
 
     if (profile) {
       console.log('Existing profile found with role:', profile.role);
       return { role: profile.role };
     }
 
-    // If no profile exists, create one
-    if (fetchError?.code === 'PGRST116' || !profile) {
-      console.log('No profile found, attempting to create new profile');
-      const createPromise = supabase
-        .from('profiles')
-        .insert([
-          {
-            id: user.id,
-            email: user.email,
-            role: 'applicant',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ])
-        .select('role')
-        .single();
-
-      console.log('Creating profile...');
-      const { data: newProfile, error: createError } = await Promise.race([
-        createPromise,
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Profile creation timeout')), 5000)
-        )
-      ]) as any;
-
-      console.log('Profile creation complete:', { newProfile, createError });
-
-      if (createError) {
-        console.log('Create error details:', {
-          code: createError.code,
-          message: createError.message,
-          details: createError.details,
-          hint: createError.hint
-        });
-
-        if (createError.code === '23505') {
-          console.log('Profile already exists, attempting to fetch again');
-          const refetchPromise = supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-          const { data: existingProfile, error: refetchError } = await Promise.race([
-            refetchPromise,
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Profile refetch timeout')), 5000)
-            )
-          ]) as any;
-
-          console.log('Profile refetch result:', { existingProfile, refetchError });
-
-          if (refetchError) {
-            console.error('Error refetching profile:', refetchError);
-            return { role: 'public' };
-          }
-
-          if (existingProfile) {
-            console.log('Successfully fetched existing profile:', existingProfile);
-            return { role: existingProfile.role };
-          }
-        }
-        
-        console.error('Error creating profile:', createError);
-        return { role: 'public' };
-      }
-
-      if (!newProfile) {
-        console.error('No profile returned after creation');
-        return { role: 'public' };
-      }
-
-      console.log('New profile created with role:', newProfile.role);
-      return { role: newProfile.role };
-    }
-
+    // Handle specific error cases
     if (fetchError) {
-      console.error('Error fetching profile:', {
+      console.error('Fetch error details:', {
         code: fetchError.code,
         message: fetchError.message,
         details: fetchError.details,
         hint: fetchError.hint
       });
+
+      // If no rows found, create profile
+      if (fetchError.code === 'PGRST116') {
+        console.log('No profile found, creating new profile');
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: user.id,
+              email: user.email,
+              role: 'applicant',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ])
+          .select('role')
+          .single();
+
+        console.log('Profile creation result:', { newProfile, createError });
+
+        if (createError) {
+          console.error('Create error details:', {
+            code: createError.code,
+            message: createError.message,
+            details: createError.details,
+            hint: createError.hint
+          });
+
+          // If profile was created by another request, try to fetch it
+          if (createError.code === '23505') {
+            console.log('Profile exists (race condition), fetching existing profile');
+            const { data: existingProfile, error: refetchError } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', user.id)
+              .single();
+
+            if (refetchError) {
+              console.error('Error fetching existing profile:', refetchError);
+              return { role: 'public' };
+            }
+
+            if (existingProfile) {
+              console.log('Successfully fetched existing profile:', existingProfile);
+              return { role: existingProfile.role };
+            }
+          }
+
+          // For any other creation error, return public role
+          return { role: 'public' };
+        }
+
+        if (newProfile) {
+          console.log('New profile created with role:', newProfile.role);
+          return { role: newProfile.role };
+        }
+      }
+
+      // Handle permission errors
+      if (fetchError.code === 'PGRST301') {
+        console.log('Permission error, checking auth status...');
+        const { data: { session }, error: sessionError } = await auth.getSession();
+        
+        if (sessionError || !session) {
+          console.error('Auth session invalid:', sessionError);
+          return { role: 'public' };
+        }
+      }
+
+      // For any other fetch error, return public role
       return { role: 'public' };
     }
 
-    console.warn('No profile found and no error - defaulting to public role');
+    // Fallback case
+    console.warn('No profile or error returned - defaulting to public role');
     return { role: 'public' };
   } catch (error) {
     console.error('Unexpected error in getOrCreateProfile:', {
