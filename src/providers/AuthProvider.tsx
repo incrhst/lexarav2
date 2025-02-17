@@ -34,47 +34,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     console.log('Starting sign out process...');
     try {
-      // Clear local state first
+      // Clear all storage first
+      console.log('Clearing storage...');
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+      sessionStorage.clear();
+
+      // Clear local state
       console.log('Clearing local state...');
       setUser(null);
       setRole('public');
       setShouldRedirect(true);
       setLoading(false);
 
-      // Sign out from Supabase and wait for it to complete
+      // Sign out from Supabase
       console.log('Signing out from Supabase...');
-      const { error } = await supabase.auth.signOut({
-        scope: 'local'  // First clear local session
-      });
-      
-      if (error) {
-        console.error('Local Supabase signOut error:', error);
-        throw error;
-      }
+      await supabase.auth.signOut();
 
-      // Then clear global session
-      const { error: globalError } = await supabase.auth.signOut({
-        scope: 'global'
-      });
-
-      if (globalError) {
-        console.error('Global Supabase signOut error:', globalError);
-        throw globalError;
-      }
-
-      // Clear any stored tokens
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
-
-      // Force a complete reload to clear everything
+      // Force a complete reload and redirect
       console.log('Forcing complete page reload...');
-      window.location.replace('/login');
+      window.location.href = '/login';
+      window.location.reload();
     } catch (error) {
       console.error('Error in signOut function:', error);
       // Even if there's an error, try to clean up everything
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
-      window.location.replace('/login');
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+      sessionStorage.clear();
+      window.location.href = '/login';
+      window.location.reload();
     }
   };
 
