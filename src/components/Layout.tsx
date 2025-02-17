@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { LogOut, LogIn, LucideIcon } from 'lucide-react';
-import { useAuthContext } from '../providers/AuthProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { useNavigation } from '../hooks/useNavigation';
 import Header from './Header';
 import Logo from './Logo';
@@ -23,13 +23,10 @@ type NavigationItem = NavigationLink | NavigationDivider;
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, role, loading } = useAuthContext();
+  const { user, role, loading } = useAuth();
   const navigation = useNavigation(role, loading);
 
-  console.log('Layout render:', { user, role, loading, navigationItems: navigation });
-
   const handleNavigation = async (item: NavigationLink) => {
-    console.log('Navigation item clicked:', item);
     if (item.action) {
       try {
         await item.action();
@@ -41,21 +38,14 @@ export default function Layout() {
     }
   };
 
-  // If no user and not on login page, redirect to login
-  if (!user && !loading && location.pathname !== '/login') {
-    console.log('No user detected, redirecting to login');
-    return <Navigate to="/login" replace />;
-  }
-
-  // If we're on the login page and have a user, redirect to home
-  if (user && !loading && location.pathname === '/login') {
-    console.log('User detected on login page, redirecting to home');
-    return <Navigate to="/" replace />;
-  }
-
-  // Don't render layout on login page
-  if (location.pathname === '/login') {
+  // Don't render layout on auth pages
+  if (['/login', '/register', '/reset-password'].includes(location.pathname)) {
     return <Outlet />;
+  }
+
+  // If no user and not on auth page, redirect to login
+  if (!user && !loading) {
+    return <Navigate to="/login" replace />;
   }
 
   return (
@@ -74,7 +64,6 @@ export default function Layout() {
               <div className="text-sm text-gray-500">Loading navigation...</div>
             ) : navigation && navigation.length > 0 ? (
               navigation.map((item, index) => {
-                console.log('Rendering navigation item:', item);
                 return 'divider' in item ? (
                   <div key={`divider-${index}`} className="h-px bg-primary/10 my-2" />
                 ) : (

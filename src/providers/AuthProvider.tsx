@@ -1,70 +1,69 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { User, Session } from '@supabase/supabase-js';
+import { auth, supabase } from '../lib/supabase';
 import { Navigate, useLocation } from 'react-router-dom';
 
 type UserRole = 'admin' | 'processor' | 'user' | 'agent' | 'public' | 'applicant';
 
-interface AuthContextType {
+interface AuthState {
+  session: Session | null;
   user: User | null;
-  loading: boolean;
-  error?: Error;
   role: UserRole;
-  updateProfile: (profileData: any) => Promise<void>;
-  hasRole: (requiredRoles: UserRole | UserRole[]) => boolean;
+  loading: boolean;
+}
+
+interface AuthContextType extends AuthState {
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  hasRole: (requiredRoles: UserRole | UserRole[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<UserRole>('public');
-
-  const updateProfile = async (profileData: any) => {
-    const { error } = await supabase.auth.updateUser({ data: profileData });
-    if (error) throw error;
-  };
-
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  };
-
-  const hasRole = (requiredRoles: UserRole | UserRole[]): boolean => {
-    if (Array.isArray(requiredRoles)) {
-      return requiredRoles.includes(role);
-    }
-    return role === requiredRoles;
-  };
+  const [state, setState] = useState<AuthState>({
+    session: null,
+    user: null,
+    role: 'public',
+    loading: true
+  });
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+    auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setState(prev => ({ ...prev, session, user: session.user }));
         // Fetch role from profile
         supabase
           .from('profiles')
           .select('role')
           .eq('id', session.user.id)
           .single()
-          .then(({ data, error }) => {
-            if (!error && data) {
-              setRole(data.role);
+          .then(({ data }) => {
+            if (data?.role) {
+              setState(prev => ({ 
+                ...prev, 
+                role: data.role as UserRole,
+                loading: false 
+              }));
             }
-            setLoading(false);
           });
       } else {
-        setRole('public');
-        setLoading(false);
+        setState(prev => ({ 
+          ...prev, 
+          session: null, 
+          user: null, 
+          role: 'public',
+          loading: false 
+        }));
       }
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+      setState(prev => ({ ...prev, session, user: session?.user ?? null }));
+      
       if (session?.user) {
         const { data } = await supabase
           .from('profiles')
@@ -72,11 +71,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', session.user.id)
           .single();
         
-        if (data) {
-          setRole(data.role);
-        }
+        setState(prev => ({ 
+          ...prev, 
+          role: (data?.role as UserRole) ?? 'public'
+        }));
       } else {
-        setRole('public');
+        setState(prev => ({ 
+          ...prev, 
+          role: 'public'
+        }));
       }
     });
 
@@ -85,14 +88,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const value = {
-    user,
-    loading,
-    role,
-    updateProfile,
-    hasRole,
-    signOut
+  const signIn = async (email: string, password: string) => {
+    const { error } = await auth.signIn(email, password);
+    if (error) throw error;
   };
+
+  const signUp = async (email: string, password: string) => {
+    const { error } = await auth.signUp(email, password);
+    if (error) throw error;
+  };
+
+  const signOut = async () => {
+    const { error } = await auth.signOut();
+    if (error) throw error;
+  };
+
+  const hasRole = (requiredRoles: UserRole | UserRole[]): boolean => {
+    if (Array.isArray(requiredRoles)) {
+      return requiredRoles.includes(state.role);
+    }
+    return state.role === requiredRoles;
+  };
+
+  const value = {
+    ...state,
+    signIn,
+    signUp,
+    signOut,
+    hasRole
+  };
+
+  if (state.loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-primary">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={value}>
@@ -101,10 +133,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuthContext() {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuthContext must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
@@ -115,7 +147,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
-  const { user, loading, hasRole } = useAuthContext();
+  const { user, loading, hasRole } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -138,16 +170,16 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 }
 
 export function useAdminAuth() {
-  const { user, hasRole } = useAuthContext();
+  const { user, hasRole } = useAuth();
   return { user, isAdmin: hasRole('admin') };
 }
 
 export function useAgentAuth() {
-  const { user, hasRole } = useAuthContext();
+  const { user, hasRole } = useAuth();
   return { user, isAgent: hasRole('agent') };
 }
 
 export function useApplicantAuth() {
-  const { user, hasRole } = useAuthContext();
+  const { user, hasRole } = useAuth();
   return { user, isApplicant: hasRole('applicant') };
 } 

@@ -1,30 +1,28 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Search, LogOut, User, LogIn } from 'lucide-react';
-import { useAuthContext } from '../providers/AuthProvider';
+import { useAuth } from '../providers/AuthProvider';
 import UserRoleIndicator from './UserRoleIndicator';
 import Button from './Button';
 import Logo from './Logo';
 
 export default function Header() {
-  const { user, role, signOut } = useAuthContext();
-
-  console.log('Header rendering with:', { user, role });
+  const { user, role, signOut } = useAuth();
 
   const handleLogout = async () => {
     try {
-      console.log('Header: Starting logout');
       await signOut();
-      console.log('Header: Logout successful');
     } catch (error) {
-      console.error('Header: Error signing out:', error);
+      console.error('Error signing out:', error);
     }
   };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8" style={{ backgroundColor: '#EDEBE6' }}>
       <div className="flex items-center">
-        <Logo className="h-8 w-auto" />
+        <Link to="/">
+          <Logo className="h-8 w-auto" />
+        </Link>
       </div>
       
       <div className="flex items-center gap-4">

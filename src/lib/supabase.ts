@@ -8,13 +8,27 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
+// Create Supabase client with default auth settings
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Export auth helper functions
+export const auth = {
+  signIn: async (email: string, password: string) => {
+    return supabase.auth.signInWithPassword({ email, password });
+  },
+  signUp: async (email: string, password: string) => {
+    return supabase.auth.signUp({ email, password });
+  },
+  signOut: async () => {
+    return supabase.auth.signOut();
+  },
+  getSession: async () => {
+    return supabase.auth.getSession();
+  },
+  onAuthStateChange: (callback: (event: any, session: any) => void) => {
+    return supabase.auth.onAuthStateChange(callback);
   }
-});
+};
 
 // Test function to verify connection
 export async function testSupabaseConnection() {
