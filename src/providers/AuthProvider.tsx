@@ -28,13 +28,19 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
     // First try to get the profile
     console.log('Fetching profile...');
     const client = supabaseAdmin || supabase;
-    const { data: profile, error: fetchError } = await client
+
+    // Add timeout to the fetch
+    const fetchPromise = client
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    console.log('Profile fetch result:', { profile, fetchError });
+    console.log('Fetch request initiated');
+
+    const { data: profile, error: fetchError } = await fetchPromise;
+
+    console.log('Profile fetch completed with:', { profile, fetchError });
 
     if (profile) {
       console.log('Existing profile found with role:', profile.role);
@@ -51,7 +57,7 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
       });
 
       // If no rows found, create profile
-      if (fetchError.code === 'PGRST116') {
+      if (fetchError.code === 'PGRST116' || !profile) {
         console.log('No profile found, creating new profile');
         const { data: newProfile, error: createError } = await client
           .from('profiles')
@@ -114,6 +120,23 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
         
         if (sessionError || !session) {
           console.error('Auth session invalid:', sessionError);
+          return { role: 'public' };
+        }
+
+        // Try one more time with fresh session
+        const { data: retryProfile, error: retryError } = await client
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (retryProfile) {
+          console.log('Profile fetch succeeded after session refresh:', retryProfile);
+          return { role: retryProfile.role };
+        }
+
+        if (retryError) {
+          console.error('Profile fetch failed after session refresh:', retryError);
           return { role: 'public' };
         }
       }
