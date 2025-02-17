@@ -8,6 +8,7 @@ import {
   UsersIcon,
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
+import Header from '../Header';
 
 const navigation = [
   {
@@ -112,33 +113,13 @@ export default function AdminLayout() {
                   ))}
                 </nav>
               </div>
-              <div className="flex flex-shrink-0 border-t border-gray-200 p-4">
-                <div className="group block w-full flex-shrink-0">
-                  <div className="flex items-center">
-                    <div>
-                      <img
-                        className="inline-block h-9 w-9 rounded-full"
-                        src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                        alt=""
-                      />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                        Admin User
-                      </p>
-                      <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700">
-                        View profile
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Main content */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <Header />
           <div className="relative z-0 flex flex-1 overflow-hidden">
             <main className="relative z-0 flex-1 overflow-y-auto focus:outline-none">
               <div className="py-6">
