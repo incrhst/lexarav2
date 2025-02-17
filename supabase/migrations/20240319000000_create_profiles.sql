@@ -12,6 +12,7 @@ DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Authenticated users can view all profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Service role has full access" ON public.profiles;
+DROP POLICY IF EXISTS "Enable all operations for service role" ON public.profiles;
 
 -- Create profiles table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -27,21 +28,23 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Create new, more permissive policies
-CREATE POLICY "Service role has full access"
+CREATE POLICY "Enable all operations for service role"
   ON public.profiles
-  USING (auth.jwt() ->> 'role' = 'service_role');
+  FOR ALL
+  USING (current_user = 'authenticated')
+  WITH CHECK (current_user = 'authenticated');
 
 CREATE POLICY "Authenticated users can view all profiles"
   ON public.profiles FOR SELECT
   USING (auth.role() IN ('authenticated', 'service_role'));
 
-CREATE POLICY "Users can update own profile or service role"
+CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
-  USING ((auth.uid() = id) OR (auth.role() = 'service_role'));
+  USING (auth.uid() = id);
 
-CREATE POLICY "Users can insert own profile or service role"
+CREATE POLICY "Users can insert own profile"
   ON public.profiles FOR INSERT
-  WITH CHECK ((auth.uid() = id) OR (auth.role() = 'service_role'));
+  WITH CHECK (auth.uid() = id);
 
 -- Create indexes if they don't exist
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);

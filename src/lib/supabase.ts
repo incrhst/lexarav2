@@ -10,7 +10,21 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 // Create Supabase client with default auth settings
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'x-my-custom-header': 'my-app-name'
+    }
+  },
+  db: {
+    schema: 'public'
+  }
+});
 
 // Create service role client for admin operations
 export const supabaseAdmin = supabaseServiceKey 
@@ -18,25 +32,60 @@ export const supabaseAdmin = supabaseServiceKey
       auth: {
         autoRefreshToken: false,
         persistSession: false
+      },
+      global: {
+        headers: {
+          'x-my-custom-header': 'my-app-name-admin'
+        }
+      },
+      db: {
+        schema: 'public'
       }
     })
   : null;
 
+// Add debug logging
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('Supabase Auth State Change:', { event, session });
+  if (session) {
+    console.log('JWT Token:', session.access_token);
+    try {
+      const decoded = JSON.parse(atob(session.access_token.split('.')[1]));
+      console.log('Decoded JWT:', decoded);
+    } catch (error) {
+      console.error('Error decoding JWT:', error);
+    }
+  }
+});
+
 // Export auth helper functions
 export const auth = {
   signIn: async (email: string, password: string) => {
-    return supabase.auth.signInWithPassword({ email, password });
+    console.log('Attempting sign in for:', email);
+    const result = await supabase.auth.signInWithPassword({ email, password });
+    console.log('Sign in result:', result);
+    return result;
   },
   signUp: async (email: string, password: string) => {
-    return supabase.auth.signUp({ email, password });
+    console.log('Attempting sign up for:', email);
+    const result = await supabase.auth.signUp({ email, password });
+    console.log('Sign up result:', result);
+    return result;
   },
   signOut: async () => {
-    return supabase.auth.signOut();
+    console.log('Attempting sign out');
+    const result = await supabase.auth.signOut();
+    console.log('Sign out result:', result);
+    return result;
   },
   getSession: async () => {
-    return supabase.auth.getSession();
+    console.log('Getting session');
+    const result = await supabase.auth.getSession();
+    console.log('Get session result:', result);
+    return result;
   },
   onAuthStateChange: (callback: (event: any, session: any) => void) => {
+    console.log('Setting up auth state change listener');
     return supabase.auth.onAuthStateChange(callback);
   }
 };
