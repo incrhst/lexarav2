@@ -16,22 +16,15 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['lucide-react'],
-    include: ['@stripe/stripe-js', 'axios']
+    include: ['@stripe/stripe-js', '@stripe/react-stripe-js', 'axios'],
+    exclude: ['lucide-react']
   },
   build: {
     rollupOptions: {
-      external: ['@stripe/react-stripe-js', '@stripe/stripe-js', 'axios'],
       output: {
-        globals: {
-          '@stripe/react-stripe-js': 'ReactStripe',
-          '@stripe/stripe-js': 'Stripe',
-          'axios': 'axios'
-        },
-        paths: {
-          '@stripe/react-stripe-js': 'https://cdn.jsdelivr.net/npm/@stripe/react-stripe-js@2.4.0/dist/react-stripe.umd.min.js',
-          '@stripe/stripe-js': 'https://cdn.jsdelivr.net/npm/@stripe/stripe-js@2.4.0/dist/stripe.min.js',
-          'axios': 'https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js'
+        manualChunks: {
+          stripe: ['@stripe/stripe-js', '@stripe/react-stripe-js'],
+          vendor: ['react', 'react-dom', 'react-router-dom', 'axios']
         }
       }
     },
