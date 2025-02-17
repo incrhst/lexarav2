@@ -9,15 +9,16 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],
-    include: ['@stripe/stripe-js']
+    include: ['@stripe/stripe-js', 'axios']
   },
   build: {
     rollupOptions: {
-      external: ['@stripe/react-stripe-js', '@stripe/stripe-js'],
+      external: ['@stripe/react-stripe-js', '@stripe/stripe-js', 'axios'],
       output: {
         globals: {
           '@stripe/react-stripe-js': 'ReactStripe',
-          '@stripe/stripe-js': 'Stripe'
+          '@stripe/stripe-js': 'Stripe',
+          'axios': 'axios'
         }
       }
     }
