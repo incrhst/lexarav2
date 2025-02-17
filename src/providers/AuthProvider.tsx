@@ -34,8 +34,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     console.log('Starting sign out process...');
     try {
-      setLoading(true);
-      
       // Sign out from Supabase first
       const { error } = await supabase.auth.signOut();
       console.log('Supabase signOut response:', error ? 'Error occurred' : 'Success');
@@ -45,24 +43,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      // Then clear local state
+      // Clear local state
       console.log('Clearing local state...');
       setUser(null);
       setRole('public');
-      setLoading(false);
       
-      // Set redirect flag last
+      // Set redirect flag
       console.log('Setting redirect flag...');
       setShouldRedirect(true);
-      
     } catch (error) {
       console.error('Error in signOut function:', error);
       // Even if there's an error, try to clean up local state
       setUser(null);
       setRole('public');
-      setLoading(false);
       setShouldRedirect(true);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -18,7 +18,6 @@ export default function Header() {
       console.log('Header: Starting logout');
       await signOut();
       console.log('Header: Logout successful');
-      navigate('/login', { replace: true });
     } catch (error) {
       console.error('Header: Error signing out:', error);
     }

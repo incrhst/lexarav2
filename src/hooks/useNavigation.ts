@@ -18,6 +18,7 @@ type NavigationLink = {
   to: string;
   icon: LucideIcon;
   end?: boolean;
+  action?: () => void;
 };
 
 type NavigationDivider = {
@@ -27,7 +28,7 @@ type NavigationDivider = {
 type NavigationItem = NavigationLink | NavigationDivider;
 
 export function useNavigation(role: string | null, loading: boolean): NavigationItem[] {
-  const { user } = useAuthContext();
+  const { user, signOut } = useAuthContext();
 
   console.log('useNavigation called with:', { role, loading, user });
 
@@ -105,9 +106,10 @@ export function useNavigation(role: string | null, loading: boolean): Navigation
   if (user) {
     navigation.push({
       name: 'Sign Out',
-      to: '#',
+      to: '/login',
       icon: LogOut,
-      end: true
+      end: true,
+      action: signOut
     });
   } else {
     navigation.push({

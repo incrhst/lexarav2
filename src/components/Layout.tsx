@@ -11,6 +11,7 @@ type NavigationLink = {
   to: string;
   icon: LucideIcon;
   end?: boolean;
+  action?: () => void;
 };
 
 type NavigationDivider = {
@@ -22,21 +23,18 @@ type NavigationItem = NavigationLink | NavigationDivider;
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, role, loading, signOut } = useAuthContext();
+  const { user, role, loading } = useAuthContext();
   const navigation = useNavigation(role, loading);
 
   console.log('Layout render:', { user, role, loading, navigationItems: navigation });
 
   const handleNavigation = async (item: NavigationLink) => {
     console.log('Navigation item clicked:', item);
-    if (item.name === 'Sign Out') {
+    if (item.action) {
       try {
-        console.log('Layout: Starting logout');
-        await signOut();
-        console.log('Layout: Logout successful');
-        navigate('/login', { replace: true });
+        await item.action();
       } catch (error) {
-        console.error('Layout: Error signing out:', error);
+        console.error('Error executing navigation action:', error);
       }
     } else {
       navigate(item.to);
