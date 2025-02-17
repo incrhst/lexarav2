@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuthContext } from '../providers/AuthProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { useNavigation } from '../hooks/useNavigation';
 
 const Navigation = () => {
-  const { user, loading } = useAuthContext();
-  const navigationItems = useNavigation(user?.role || 'public', loading);
+  const { user, role, loading } = useAuth();
+  const navigationItems = useNavigation(role, loading);
 
   return (
     <nav className="fixed left-0 top-0 h-screen w-[250px] bg-background-alt shadow-md p-4">
@@ -13,9 +13,9 @@ const Navigation = () => {
         <h2 className="text-2xl font-semibold text-primary">Lexara</h2>
       </div>
       <ul className="space-y-2">
-        {navigationItems.map((item) => {
-          if (item.divider) {
-            return <li key={`divider-${item.name}`} className="border-t border-primary/10 my-4" />;
+        {navigationItems.map((item, index) => {
+          if ('divider' in item) {
+            return <li key={`divider-${index}`} className="border-t border-primary/10 my-4" />;
           }
           return (
             <li key={item.to}>
