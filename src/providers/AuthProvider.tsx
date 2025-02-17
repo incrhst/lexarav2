@@ -66,9 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Sign out using the temporary client
       await tempClient.auth.signOut();
 
-      // Force navigation to login and reload
-      window.location.href = '/login';
-      window.location.reload();
+      // Navigate to login page
+      window.location.replace('/login');
     } catch (error) {
       console.error('Error in signOut function:', error);
       // Even if there's an error, force cleanup
@@ -85,8 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       sessionStorage.clear();
       
-      window.location.href = '/login';
-      window.location.reload();
+      window.location.replace('/login');
     }
   };
 

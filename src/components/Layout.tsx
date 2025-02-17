@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { LogOut, LogIn, LucideIcon } from 'lucide-react';
 import { useAuthContext } from '../providers/AuthProvider';
 import { useNavigation } from '../hooks/useNavigation';
@@ -33,6 +33,8 @@ export default function Layout() {
     if (item.action) {
       try {
         await item.action();
+        // Don't navigate if there's an action (like sign out)
+        return;
       } catch (error) {
         console.error('Error executing navigation action:', error);
       }
@@ -40,6 +42,11 @@ export default function Layout() {
       navigate(item.to);
     }
   };
+
+  // If no user, redirect to login
+  if (!user && !loading && location.pathname !== '/login') {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
