@@ -10,32 +10,13 @@ if (!supabaseUrl || !supabaseKey) {
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false,
     storage: {
-      getItem: (key) => {
-        try {
-          const value = localStorage.getItem(key);
-          return value ? JSON.parse(value) : null;
-        } catch {
-          return null;
-        }
-      },
-      setItem: (key, value) => {
-        try {
-          localStorage.setItem(key, JSON.stringify(value));
-        } catch {
-          // If storage fails, don't persist
-        }
-      },
-      removeItem: (key) => {
-        try {
-          localStorage.removeItem(key);
-        } catch {
-          // If removal fails, continue
-        }
-      }
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {}
     }
   }
 });

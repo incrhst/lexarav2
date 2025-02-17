@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Navigate, useLocation } from 'react-router-dom';
+import { createClient } from '@supabase/supabase-js';
 
 type UserRole = 'admin' | 'processor' | 'user' | 'agent' | 'public' | 'applicant';
 
@@ -34,34 +35,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     console.log('Starting sign out process...');
     try {
-      // Clear all storage first
-      console.log('Clearing storage...');
-      const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key);
-        }
-      });
-      sessionStorage.clear();
-
-      // Clear local state
-      console.log('Clearing local state...');
+      // Immediately clear all state and storage
       setUser(null);
       setRole('public');
       setShouldRedirect(true);
       setLoading(false);
 
-      // Sign out from Supabase
-      console.log('Signing out from Supabase...');
-      await supabase.auth.signOut();
-
-      // Force a complete reload and redirect
-      console.log('Forcing complete page reload...');
-      window.location.href = '/login';
-      window.location.reload();
-    } catch (error) {
-      console.error('Error in signOut function:', error);
-      // Even if there's an error, try to clean up everything
+      // Clear all Supabase-related storage
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
         if (key.startsWith('sb-') || key.includes('supabase')) {
@@ -69,6 +49,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       sessionStorage.clear();
+
+      // Create a new Supabase client with no persistence
+      const tempClient = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+            detectSessionInUrl: false
+          }
+        }
+      );
+
+      // Sign out using the temporary client
+      await tempClient.auth.signOut();
+
+      // Force navigation to login and reload
+      window.location.href = '/login';
+      window.location.reload();
+    } catch (error) {
+      console.error('Error in signOut function:', error);
+      // Even if there's an error, force cleanup
+      setUser(null);
+      setRole('public');
+      setShouldRedirect(true);
+      setLoading(false);
+      
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+      sessionStorage.clear();
+      
       window.location.href = '/login';
       window.location.reload();
     }
