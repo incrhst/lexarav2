@@ -77,9 +77,51 @@ supabase.auth.onAuthStateChange((event, session) => {
 });
 
 // Test connection
-console.log('Testing Supabase connection...');
-console.log('URL:', supabaseUrl);
-console.log('Key (first 10 chars):', supabaseKey?.substring(0, 10));
+export async function testSupabaseConnection() {
+  console.log('Testing Supabase connection...');
+  console.log('URL:', supabaseUrl);
+  console.log('Key (first 10 chars):', supabaseKey?.substring(0, 10));
+  
+  try {
+    // Test auth service first
+    const { data: authData, error: authError } = await supabase.auth.getSession();
+    
+    if (authError) {
+      console.error('Auth service test error:', authError.message);
+      return false;
+    }
+    console.log('✅ Auth service connection successful');
+
+    // Test profiles table
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .limit(1);
+
+    if (profilesError) {
+      console.error('Profiles table test error:', profilesError.message);
+      return false;
+    }
+    console.log('✅ Profiles table accessible');
+
+    // Test applications table
+    const { data: applicationsData, error: applicationsError } = await supabase
+      .from('applications')
+      .select('*')
+      .limit(1);
+
+    if (applicationsError) {
+      console.error('Applications table test error:', applicationsError.message);
+      return false;
+    }
+    console.log('✅ Applications table accessible');
+
+    return true;
+  } catch (err) {
+    console.error('Unexpected error during connection test:', err);
+    return false;
+  }
+}
 
 // Export auth instance
 export const auth = supabase.auth;
