@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { auth, supabase } from '../lib/supabase';
+import { auth, supabase, supabaseAdmin } from '../lib/supabase';
 import { Navigate, useLocation } from 'react-router-dom';
 
 type UserRole = 'admin' | 'processor' | 'user' | 'agent' | 'public' | 'applicant';
@@ -27,7 +27,8 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
   try {
     // First try to get the profile
     console.log('Fetching profile...');
-    const { data: profile, error: fetchError } = await supabase
+    const client = supabaseAdmin || supabase;
+    const { data: profile, error: fetchError } = await client
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -52,7 +53,7 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
       // If no rows found, create profile
       if (fetchError.code === 'PGRST116') {
         console.log('No profile found, creating new profile');
-        const { data: newProfile, error: createError } = await supabase
+        const { data: newProfile, error: createError } = await client
           .from('profiles')
           .insert([
             {
@@ -79,7 +80,7 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
           // If profile was created by another request, try to fetch it
           if (createError.code === '23505') {
             console.log('Profile exists (race condition), fetching existing profile');
-            const { data: existingProfile, error: refetchError } = await supabase
+            const { data: existingProfile, error: refetchError } = await client
               .from('profiles')
               .select('role')
               .eq('id', user.id)
