@@ -33,8 +33,10 @@ export default function Layout() {
     if (item.action) {
       try {
         await item.action();
-        // Don't navigate if there's an action (like sign out)
-        return;
+        // After sign out, force a re-render by navigating
+        if (item.name === 'Sign Out') {
+          navigate('/login', { replace: true });
+        }
       } catch (error) {
         console.error('Error executing navigation action:', error);
       }
@@ -43,9 +45,16 @@ export default function Layout() {
     }
   };
 
-  // If no user, redirect to login
+  // If no user and not on login page, redirect to login
   if (!user && !loading && location.pathname !== '/login') {
+    console.log('No user detected, redirecting to login');
     return <Navigate to="/login" replace />;
+  }
+
+  // If we're on the login page and have a user, redirect to home
+  if (user && !loading && location.pathname === '/login') {
+    console.log('User detected on login page, redirecting to home');
+    return <Navigate to="/" replace />;
   }
 
   return (

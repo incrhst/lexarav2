@@ -37,6 +37,16 @@ export function useNavigation(role: string | null, loading: boolean): Navigation
     return [];
   }
 
+  // If no user, only show public navigation
+  if (!user) {
+    console.log('No user, returning public navigation');
+    return [
+      { name: 'Home', to: '/', icon: Home, end: true },
+      { divider: true },
+      { name: 'Sign In', to: '/login', icon: LogIn, end: true }
+    ];
+  }
+
   const baseNavigation: NavigationItem[] = [
     { name: 'Home', to: '/', icon: Home, end: true },
   ];
@@ -100,23 +110,15 @@ export function useNavigation(role: string | null, loading: boolean): Navigation
       navigation = publicNavigation;
   }
 
-  // Add login/logout at the bottom
-  navigation.push({ divider: true });
-  
+  // Add sign out button if user is authenticated
   if (user) {
+    navigation.push({ divider: true });
     navigation.push({
       name: 'Sign Out',
       to: '/login',
       icon: LogOut,
       end: true,
       action: signOut
-    });
-  } else {
-    navigation.push({
-      name: 'Sign In',
-      to: '/login',
-      icon: LogIn,
-      end: true
     });
   }
 
