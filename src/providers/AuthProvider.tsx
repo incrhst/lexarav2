@@ -44,7 +44,7 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
       console.log('No profile found, creating new profile');
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
-        .upsert([
+        .insert([
           {
             id: user.id,
             email: user.email,
@@ -52,18 +52,34 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           },
-        ], 
-        { 
-          onConflict: 'id'
-        })
+        ])
         .select('role')
         .single();
 
       console.log('Profile creation result:', { newProfile, createError });
 
       if (createError) {
+        if (createError.code === '23505') { // Unique violation error
+          console.log('Profile already exists, fetching again');
+          const { data: existingProfile, error: refetchError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+          if (refetchError) {
+            console.error('Error refetching profile:', refetchError);
+            return { role: 'public' };
+          }
+
+          if (existingProfile) {
+            console.log('Successfully fetched existing profile:', existingProfile);
+            return { role: existingProfile.role };
+          }
+        }
+        
         console.error('Error creating profile:', createError);
-        throw createError;
+        return { role: 'public' };
       }
 
       if (!newProfile) {
@@ -78,14 +94,14 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
     // If there was a different error
     if (fetchError) {
       console.error('Error fetching profile:', fetchError);
-      throw fetchError;
+      return { role: 'public' };
     }
 
     console.warn('No profile found and no error - defaulting to public role');
     return { role: 'public' };
   } catch (error) {
     console.error('Unexpected error in getOrCreateProfile:', error);
-    throw error;
+    return { role: 'public' };
   }
 }
 
