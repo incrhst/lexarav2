@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { useUserRole } from './useUserRole';
+import { useAuth } from '../providers/AuthProvider';
 
 export function useDemoPassword() {
-  const { role } = useUserRole();
+  const { role } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 

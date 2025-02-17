@@ -1,12 +1,12 @@
 import React from 'react';
-import { useUserRole } from '../../hooks/useUserRole';
+import { useAuth } from '../../providers/AuthProvider';
 import ApplicationList from './components/ApplicationList';
 import DashboardStats from './components/DashboardStats';
 import RecentActivity from './components/RecentActivity';
 import PublicDashboard from './components/PublicDashboard';
 
 export default function Dashboard() {
-  const { role, loading } = useUserRole();
+  const { role, loading } = useAuth();
 
   if (loading) {
     return <div className="animate-pulse">Loading...</div>;
