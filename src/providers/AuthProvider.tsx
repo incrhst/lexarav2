@@ -22,6 +22,8 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  console.log('AuthProvider rendered');
+  
   const [state, setState] = useState<AuthState>({
     session: null,
     user: null,
@@ -29,16 +31,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading: true
   });
 
+  console.log('Current auth state:', state);
+
   useEffect(() => {
+    console.log('Auth effect running');
+    
     async function initializeAuth() {
+      console.log('Initializing auth...');
       try {
         // Get initial session
-        const { data: { session } } = await auth.getSession();
+        const { data: { session }, error: sessionError } = await auth.getSession();
+        console.log('Session result:', { session, error: sessionError });
         
         if (session) {
+          console.log('Session found, updating state with user');
           setState(prev => ({ ...prev, session, user: session.user }));
           
           try {
+            console.log('Fetching user role...');
             // Fetch role from profile
             const { data, error } = await supabase
               .from('profiles')
@@ -46,11 +56,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .eq('id', session.user.id)
               .single();
 
+            console.log('Role fetch result:', { data, error });
+
+            if (error) throw error;
+
             setState(prev => ({ 
               ...prev, 
               role: (data?.role as UserRole) ?? 'public',
               loading: false 
             }));
+            console.log('Auth initialization complete with role');
           } catch (error) {
             console.error('Error fetching user role:', error);
             setState(prev => ({ 
@@ -58,8 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               role: 'public',
               loading: false 
             }));
+            console.log('Auth initialization complete with error');
           }
         } else {
+          console.log('No session found, setting public state');
           setState(prev => ({ 
             ...prev, 
             session: null, 
@@ -69,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }));
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('Error in auth initialization:', error);
         setState(prev => ({ 
           ...prev, 
           session: null, 
@@ -80,27 +97,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    // Initialize auth immediately
     initializeAuth();
 
     // Listen for auth changes
+    console.log('Setting up auth listener');
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
-      setState(prev => ({ ...prev, session, user: session?.user ?? null }));
+      console.log('Auth state changed:', { event, session });
+      
+      setState(prev => {
+        console.log('Updating state with new session');
+        return { ...prev, session, user: session?.user ?? null };
+      });
       
       if (session?.user) {
         try {
-          const { data } = await supabase
+          console.log('Fetching user role after auth change...');
+          const { data, error } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', session.user.id)
             .single();
           
+          console.log('Role fetch result after auth change:', { data, error });
+
+          if (error) throw error;
+
           setState(prev => ({ 
             ...prev, 
             role: (data?.role as UserRole) ?? 'public',
             loading: false
           }));
         } catch (error) {
-          console.error('Error fetching user role:', error);
+          console.error('Error fetching user role after auth change:', error);
           setState(prev => ({ 
             ...prev, 
             role: 'public',
@@ -108,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }));
         }
       } else {
+        console.log('No session in auth change, setting public state');
         setState(prev => ({ 
           ...prev, 
           role: 'public',
@@ -117,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      console.log('Cleaning up auth effect');
       subscription.unsubscribe();
     };
   }, []);
