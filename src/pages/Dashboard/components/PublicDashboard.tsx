@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, BookOpen, Shield } from 'lucide-react';
 import Button from '../../../components/Button';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuth } from '../../../providers/AuthProvider';
 
 export default function PublicDashboard() {
   const { user } = useAuth();

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuth } from '../../../providers/AuthProvider';
 
 export function useApplicationForm() {
   const [currentStep, setCurrentStep] = useState(0);
