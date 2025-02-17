@@ -22,48 +22,71 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
-  // First try to get the profile
-  const { data: profile, error: fetchError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profile) {
-    return { role: profile.role };
-  }
-
-  // If no profile exists, create one
-  if (fetchError?.code === 'PGRST116') { // No rows returned
-    const { data: newProfile, error: createError } = await supabase
+  console.log('Starting getOrCreateProfile for user:', user.id);
+  
+  try {
+    // First try to get the profile
+    const { data: profile, error: fetchError } = await supabase
       .from('profiles')
-      .insert([
-        {
-          id: user.id,
-          email: user.email,
-          role: 'applicant', // Default role
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ])
       .select('role')
+      .eq('id', user.id)
       .single();
 
-    if (createError) {
-      console.error('Error creating profile:', createError);
-      throw createError;
+    console.log('Profile fetch result:', { profile, fetchError });
+
+    if (profile) {
+      console.log('Existing profile found with role:', profile.role);
+      return { role: profile.role };
     }
 
-    return { role: newProfile.role };
-  }
+    // If no profile exists, create one
+    if (fetchError?.code === 'PGRST116' || !profile) { // No rows returned or null profile
+      console.log('No profile found, creating new profile');
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .upsert([
+          {
+            id: user.id,
+            email: user.email,
+            role: 'applicant', // Default role
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ], 
+        { 
+          onConflict: 'id'
+        })
+        .select('role')
+        .single();
 
-  // If there was a different error
-  if (fetchError) {
-    console.error('Error fetching profile:', fetchError);
-    throw fetchError;
-  }
+      console.log('Profile creation result:', { newProfile, createError });
 
-  return { role: 'public' };
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        throw createError;
+      }
+
+      if (!newProfile) {
+        console.error('No profile returned after creation');
+        return { role: 'public' };
+      }
+
+      console.log('New profile created with role:', newProfile.role);
+      return { role: newProfile.role };
+    }
+
+    // If there was a different error
+    if (fetchError) {
+      console.error('Error fetching profile:', fetchError);
+      throw fetchError;
+    }
+
+    console.warn('No profile found and no error - defaulting to public role');
+    return { role: 'public' };
+  } catch (error) {
+    console.error('Unexpected error in getOrCreateProfile:', error);
+    throw error;
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
