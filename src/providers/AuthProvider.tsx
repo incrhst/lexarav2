@@ -35,21 +35,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     console.log('Auth effect running');
+    let isSubscribed = true;
     
     async function initializeAuth() {
       console.log('Initializing auth...');
       try {
-        // Get initial session
         const { data: { session }, error: sessionError } = await auth.getSession();
         console.log('Session result:', { session, error: sessionError });
         
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          if (isSubscribed) {
+            setState(prev => ({ 
+              ...prev, 
+              session: null, 
+              user: null, 
+              role: 'public',
+              loading: false 
+            }));
+          }
+          return;
+        }
+        
         if (session) {
           console.log('Session found, updating state with user');
-          setState(prev => ({ ...prev, session, user: session.user }));
+          if (isSubscribed) {
+            setState(prev => ({ ...prev, session, user: session.user }));
+          }
           
           try {
-            console.log('Fetching user role...');
-            // Fetch role from profile
+            console.log('Fetching user role for ID:', session.user.id);
             const { data, error } = await supabase
               .from('profiles')
               .select('role')
@@ -58,25 +73,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             console.log('Role fetch result:', { data, error });
 
-            if (error) throw error;
+            if (error) {
+              console.error('Profile fetch error:', error);
+              throw error;
+            }
 
-            setState(prev => ({ 
-              ...prev, 
-              role: (data?.role as UserRole) ?? 'public',
-              loading: false 
-            }));
-            console.log('Auth initialization complete with role');
+            if (isSubscribed) {
+              setState(prev => ({ 
+                ...prev, 
+                role: (data?.role as UserRole) ?? 'public',
+                loading: false 
+              }));
+            }
+            console.log('Auth initialization complete with role:', data?.role);
           } catch (error) {
             console.error('Error fetching user role:', error);
-            setState(prev => ({ 
-              ...prev, 
-              role: 'public',
-              loading: false 
-            }));
-            console.log('Auth initialization complete with error');
+            if (isSubscribed) {
+              setState(prev => ({ 
+                ...prev, 
+                role: 'public',
+                loading: false 
+              }));
+            }
           }
         } else {
           console.log('No session found, setting public state');
+          if (isSubscribed) {
+            setState(prev => ({ 
+              ...prev, 
+              session: null, 
+              user: null, 
+              role: 'public',
+              loading: false 
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error in auth initialization:', error);
+        if (isSubscribed) {
           setState(prev => ({ 
             ...prev, 
             session: null, 
@@ -85,26 +119,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             loading: false 
           }));
         }
-      } catch (error) {
-        console.error('Error in auth initialization:', error);
-        setState(prev => ({ 
-          ...prev, 
-          session: null, 
-          user: null, 
-          role: 'public',
-          loading: false 
-        }));
       }
     }
 
-    // Initialize auth immediately
     initializeAuth();
 
-    // Listen for auth changes
     console.log('Setting up auth listener');
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', { event, session });
       
+      if (!isSubscribed) return;
+
       setState(prev => {
         console.log('Updating state with new session');
         return { ...prev, session, user: session?.user ?? null };
@@ -112,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (session?.user) {
         try {
-          console.log('Fetching user role after auth change...');
+          console.log('Fetching user role after auth change for ID:', session.user.id);
           const { data, error } = await supabase
             .from('profiles')
             .select('role')
@@ -121,33 +146,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           console.log('Role fetch result after auth change:', { data, error });
 
-          if (error) throw error;
+          if (error) {
+            console.error('Profile fetch error in auth change:', error);
+            throw error;
+          }
 
-          setState(prev => ({ 
-            ...prev, 
-            role: (data?.role as UserRole) ?? 'public',
-            loading: false
-          }));
+          if (isSubscribed) {
+            setState(prev => ({ 
+              ...prev, 
+              role: (data?.role as UserRole) ?? 'public',
+              loading: false
+            }));
+          }
+          console.log('Auth state change complete with role:', data?.role);
         } catch (error) {
           console.error('Error fetching user role after auth change:', error);
+          if (isSubscribed) {
+            setState(prev => ({ 
+              ...prev, 
+              role: 'public',
+              loading: false
+            }));
+          }
+        }
+      } else {
+        console.log('No session in auth change, setting public state');
+        if (isSubscribed) {
           setState(prev => ({ 
             ...prev, 
             role: 'public',
             loading: false
           }));
         }
-      } else {
-        console.log('No session in auth change, setting public state');
-        setState(prev => ({ 
-          ...prev, 
-          role: 'public',
-          loading: false
-        }));
       }
     });
 
     return () => {
       console.log('Cleaning up auth effect');
+      isSubscribed = false;
       subscription.unsubscribe();
     };
   }, []);
