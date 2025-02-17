@@ -34,33 +34,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     console.log('Starting sign out process...');
     try {
-      // Sign out from Supabase first
-      const { error } = await supabase.auth.signOut();
-      console.log('Supabase signOut response:', error ? 'Error occurred' : 'Success');
-      
-      if (error) {
-        console.error('Supabase signOut error:', error);
-        throw error;
-      }
-
-      // Clear local state
+      // Clear local state first
       console.log('Clearing local state...');
       setUser(null);
       setRole('public');
       setShouldRedirect(true);
       setLoading(false);
 
-      // Force a complete reload and redirect
-      console.log('Forcing page reload and redirect...');
-      window.location.href = '/login';
+      // Sign out from Supabase and wait for it to complete
+      console.log('Signing out from Supabase...');
+      const { error } = await supabase.auth.signOut({
+        scope: 'local'  // First clear local session
+      });
+      
+      if (error) {
+        console.error('Local Supabase signOut error:', error);
+        throw error;
+      }
+
+      // Then clear global session
+      const { error: globalError } = await supabase.auth.signOut({
+        scope: 'global'
+      });
+
+      if (globalError) {
+        console.error('Global Supabase signOut error:', globalError);
+        throw globalError;
+      }
+
+      // Clear any stored tokens
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+
+      // Force a complete reload to clear everything
+      console.log('Forcing complete page reload...');
+      window.location.replace('/login');
     } catch (error) {
       console.error('Error in signOut function:', error);
-      // Even if there's an error, try to clean up local state and redirect
-      setUser(null);
-      setRole('public');
-      setShouldRedirect(true);
-      setLoading(false);
-      window.location.href = '/login';
+      // Even if there's an error, try to clean up everything
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+      window.location.replace('/login');
     }
   };
 
@@ -264,11 +278,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         switch (event) {
           case 'SIGNED_OUT':
-            console.log('User signed out, clearing state');
+            console.log('Auth state: User signed out, clearing state');
             setUser(null);
             setRole('public');
             setShouldRedirect(true);
             setLoading(false);
+            if (window.location.pathname !== '/login') {
+              window.location.replace('/login');
+            }
             break;
             
           case 'SIGNED_IN':
