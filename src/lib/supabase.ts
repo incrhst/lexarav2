@@ -5,23 +5,22 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
-// Singleton instance
+// Singleton instances with proper typing
 let supabaseInstance: SupabaseClient<Database> | null = null;
 let supabaseAdminInstance: SupabaseClient<Database> | null = null;
 
 // Create Supabase client with default auth settings
-export const supabase = (() => {
-  if (supabaseInstance) return supabaseInstance;
-
+function createSupabaseClient(): SupabaseClient<Database> {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase environment variables');
   }
 
-  supabaseInstance = createClient<Database>(supabaseUrl, supabaseKey, {
+  return createClient<Database>(supabaseUrl, supabaseKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true
+      detectSessionInUrl: true,
+      storageKey: 'lexara-auth-token' // Unique storage key to prevent conflicts
     },
     global: {
       headers: {
@@ -29,20 +28,20 @@ export const supabase = (() => {
       }
     }
   });
-
-  return supabaseInstance;
-})();
+}
 
 // Create service role client for admin operations
-export const supabaseAdmin = (() => {
-  if (supabaseAdminInstance) return supabaseAdminInstance;
+function createSupabaseAdminClient(): SupabaseClient<Database> | null {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.warn('Missing Supabase service role key');
+    return null;
+  }
 
-  if (!supabaseServiceKey) return null;
-
-  supabaseAdminInstance = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
-      persistSession: false
+      persistSession: false,
+      storageKey: 'lexara-admin-token' // Unique storage key for admin client
     },
     global: {
       headers: {
@@ -50,7 +49,21 @@ export const supabaseAdmin = (() => {
       }
     }
   });
+}
 
+// Get or create the Supabase client instance
+export const supabase = (() => {
+  if (!supabaseInstance) {
+    supabaseInstance = createSupabaseClient();
+  }
+  return supabaseInstance;
+})();
+
+// Get or create the Supabase admin client instance
+export const supabaseAdmin = (() => {
+  if (!supabaseAdminInstance) {
+    supabaseAdminInstance = createSupabaseAdminClient();
+  }
   return supabaseAdminInstance;
 })();
 
