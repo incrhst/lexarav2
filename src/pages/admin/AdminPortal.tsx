@@ -18,15 +18,9 @@ export default function AdminPortal() {
           </ul>
         </nav>
       </aside>
-      <main className="flex-1 p-4">
-        <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
+      <main className="admin-content">
+        <h1 className="text-2xl font-bold p-4">Admin Portal</h1>
         <Outlet />
-        {/* If no nested route is selected, display default content */}
-        {window.location.pathname === '/admin' && (
-          <div>
-            <p>Welcome to the Admin Portal. Please select an option from the menu.</p>
-          </div>
-        )}
       </main>
     </div>
   );
