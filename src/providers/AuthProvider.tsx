@@ -21,6 +21,51 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
+  // First try to get the profile
+  const { data: profile, error: fetchError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile) {
+    return { role: profile.role };
+  }
+
+  // If no profile exists, create one
+  if (fetchError?.code === 'PGRST116') { // No rows returned
+    const { data: newProfile, error: createError } = await supabase
+      .from('profiles')
+      .insert([
+        {
+          id: user.id,
+          email: user.email,
+          role: 'applicant', // Default role
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
+      .select('role')
+      .single();
+
+    if (createError) {
+      console.error('Error creating profile:', createError);
+      throw createError;
+    }
+
+    return { role: newProfile.role };
+  }
+
+  // If there was a different error
+  if (fetchError) {
+    console.error('Error fetching profile:', fetchError);
+    throw fetchError;
+  }
+
+  return { role: 'public' };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   console.log('AuthProvider rendered');
   
@@ -57,37 +102,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         
-        if (session) {
+        if (session?.user) {
           console.log('Session found, updating state with user');
           if (isSubscribed) {
             setState(prev => ({ ...prev, session, user: session.user }));
           }
           
           try {
-            console.log('Fetching user role for ID:', session.user.id);
-            const { data, error } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', session.user.id)
-              .single();
-
-            console.log('Role fetch result:', { data, error });
-
-            if (error) {
-              console.error('Profile fetch error:', error);
-              throw error;
-            }
+            console.log('Fetching or creating profile for user:', session.user.id);
+            const { role } = await getOrCreateProfile(session.user);
 
             if (isSubscribed) {
               setState(prev => ({ 
                 ...prev, 
-                role: (data?.role as UserRole) ?? 'public',
+                role,
                 loading: false 
               }));
             }
-            console.log('Auth initialization complete with role:', data?.role);
+            console.log('Auth initialization complete with role:', role);
           } catch (error) {
-            console.error('Error fetching user role:', error);
+            console.error('Error handling profile:', error);
             if (isSubscribed) {
               setState(prev => ({ 
                 ...prev, 
@@ -137,30 +171,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (session?.user) {
         try {
-          console.log('Fetching user role after auth change for ID:', session.user.id);
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-          
-          console.log('Role fetch result after auth change:', { data, error });
-
-          if (error) {
-            console.error('Profile fetch error in auth change:', error);
-            throw error;
-          }
+          console.log('Fetching or creating profile after auth change for user:', session.user.id);
+          const { role } = await getOrCreateProfile(session.user);
 
           if (isSubscribed) {
             setState(prev => ({ 
               ...prev, 
-              role: (data?.role as UserRole) ?? 'public',
+              role,
               loading: false
             }));
           }
-          console.log('Auth state change complete with role:', data?.role);
+          console.log('Auth state change complete with role:', role);
         } catch (error) {
-          console.error('Error fetching user role after auth change:', error);
+          console.error('Error handling profile after auth change:', error);
           if (isSubscribed) {
             setState(prev => ({ 
               ...prev, 
