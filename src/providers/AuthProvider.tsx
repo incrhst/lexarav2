@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, AuthChangeEvent } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Navigate, useLocation } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
 
 type UserRole = 'admin' | 'processor' | 'user' | 'agent' | 'public' | 'applicant';
 
@@ -10,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error?: Error;
-  role: UserRole | null;
+  role: UserRole;
   updateProfile: (profileData: any) => Promise<void>;
   hasRole: (requiredRoles: UserRole | UserRole[]) => boolean;
   signOut: () => Promise<void>;
@@ -21,379 +20,74 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error>();
-  const [role, setRole] = useState<UserRole | null>(null);
-  const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [role, setRole] = useState<UserRole>('public');
 
   const updateProfile = async (profileData: any) => {
-    const { data, error } = await supabase.auth.updateUser({ data: profileData });
-    if (error) {
-      throw error;
-    }
+    const { error } = await supabase.auth.updateUser({ data: profileData });
+    if (error) throw error;
   };
 
   const signOut = async () => {
-    console.log('Starting sign out process...');
-    try {
-      // Immediately clear all state and storage
-      setUser(null);
-      setRole('public');
-      setShouldRedirect(true);
-      setLoading(false);
-
-      // Clear all Supabase-related storage
-      const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key);
-        }
-      });
-      sessionStorage.clear();
-
-      // Create a new Supabase client with no persistence
-      const tempClient = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-            detectSessionInUrl: false
-          }
-        }
-      );
-
-      // Sign out using the temporary client
-      await tempClient.auth.signOut();
-
-      // Navigate to login page
-      window.location.replace('/login');
-    } catch (error) {
-      console.error('Error in signOut function:', error);
-      // Even if there's an error, force cleanup
-      setUser(null);
-      setRole('public');
-      setShouldRedirect(true);
-      setLoading(false);
-      
-      const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key);
-        }
-      });
-      sessionStorage.clear();
-      
-      window.location.replace('/login');
-    }
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
   const hasRole = (requiredRoles: UserRole | UserRole[]): boolean => {
-    if (!role) return false;
     if (Array.isArray(requiredRoles)) {
       return requiredRoles.includes(role);
-    } else {
-      return role === requiredRoles;
     }
+    return role === requiredRoles;
   };
 
-  async function ensureProfile(userId: string, email: string) {
-    try {
-      console.log('Starting ensureProfile for user:', { userId, email });
-      
-      // First, try to get the existing profile
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('id, email, role, full_name')
-        .eq('id', userId)
-        .single();
-
-      console.log('Profile fetch attempt:', { existingProfile, fetchError });
-
-      if (fetchError) {
-        console.log('Profile fetch error:', fetchError.code, fetchError.message);
-        // Create profile for any fetch error, not just PGRST116
-        console.log('Creating new profile');
-        const defaultRole = 'applicant' as UserRole;
-        const profileData = {
-          id: userId,
-          email,
-          full_name: email.split('@')[0],
-          role: defaultRole,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        console.log('Attempting to create profile with data:', profileData);
-        
-        const { data: newProfile, error: insertError } = await supabase
-          .from('profiles')
-          .upsert([profileData], { onConflict: 'id' })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('Profile creation error:', insertError);
-          // Instead of throwing, return a default profile
-          console.log('Returning default profile due to creation error');
-          return profileData;
-        }
-
-        console.log('Successfully created new profile:', newProfile);
-        return newProfile || profileData;
-      }
-
-      if (!existingProfile) {
-        console.log('No profile found but no error - creating default profile');
-        const defaultProfile = {
-          id: userId,
-          email,
-          full_name: email.split('@')[0],
-          role: 'applicant' as UserRole,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        return defaultProfile;
-      }
-
-      console.log('Found existing profile:', existingProfile);
-      return existingProfile;
-    } catch (error) {
-      console.error('Error in ensureProfile:', error);
-      // Instead of throwing, return a default profile
-      const defaultProfile = {
-        id: userId,
-        email,
-        full_name: email.split('@')[0],
-        role: 'applicant' as UserRole,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      console.log('Returning default profile due to error');
-      return defaultProfile;
-    }
-  }
-
-  async function fetchUserRole(userId: string, email: string) {
-    if (!userId) {
-      console.log('No userId provided to fetchUserRole');
-      setRole('public');
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      console.log('Starting fetchUserRole for user:', { userId, email });
-      
-      // First ensure profile exists
-      const profile = await ensureProfile(userId, email);
-      console.log('Profile after ensure:', profile);
-
-      if (profile && profile.role) {
-        // Validate that the role is one of our UserRole types
-        const validRoles: UserRole[] = ['admin', 'processor', 'user', 'agent', 'public', 'applicant'];
-        const newRole = validRoles.includes(profile.role as UserRole) 
-          ? profile.role as UserRole 
-          : 'applicant';
-        
-        console.log('Setting user role from profile:', newRole);
-        setRole(newRole);
-        setLoading(false);
-        return newRole;
-      } else {
-        console.log('No valid role found in profile, setting to applicant');
-        // Don't try to update the profile if we couldn't read it
-        setRole('applicant');
-        setLoading(false);
-        return 'applicant';
-      }
-    } catch (err) {
-      console.error('Error in fetchUserRole:', err);
-      console.log('Setting role to applicant due to error');
-      setRole('applicant');
-      setLoading(false);
-      return 'applicant';
-    }
-  }
-
   useEffect(() => {
-    let mounted = true;
-    let timeoutId: NodeJS.Timeout;
-
-    async function initializeAuth() {
-      try {
-        console.log('Starting auth initialization...');
-        setLoading(true);
-
-        // Get the initial session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-
-        if (sessionError) {
-          console.error('Error getting session:', sessionError);
-          setUser(null);
-          setRole('public');
-          setLoading(false);
-          return;
-        }
-
-        console.log('Initial session check:', session ? 'Session exists' : 'No session', session);
-        
-        if (session?.user) {
-          console.log('Setting user from session:', session.user);
-          setUser(session.user);
-          
-          // Set a timeout only for profile/role fetching
-          const profileTimeout = setTimeout(() => {
-            if (mounted) {
-              console.log('Profile fetch timed out, setting default role');
-              setRole('applicant');
-              setLoading(false);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        // Fetch role from profile
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (!error && data) {
+              setRole(data.role);
             }
-          }, 3000);
-
-          try {
-            await fetchUserRole(session.user.id, session.user.email || '');
-            clearTimeout(profileTimeout);
-          } catch (error) {
-            console.error('Error fetching user role:', error);
-            setRole('applicant');
             setLoading(false);
-          }
-        } else {
-          console.log('No session found, clearing state');
-          setUser(null);
-          setRole('public');
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error in initializeAuth:', error);
-        if (mounted) {
-          setUser(null);
-          setRole('public');
-          setLoading(false);
-        }
-      }
-    }
-
-    // Initialize auth state
-    initializeAuth();
-
-    // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session) => {
-      if (!mounted) return;
-
-      console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
-      
-      try {
-        switch (event) {
-          case 'SIGNED_OUT':
-            console.log('Auth state: User signed out, clearing state');
-            setUser(null);
-            setRole('public');
-            setShouldRedirect(true);
-            setLoading(false);
-            if (window.location.pathname !== '/login') {
-              window.location.replace('/login');
-            }
-            break;
-            
-          case 'SIGNED_IN':
-            if (session) {
-              console.log('User signed in:', session.user);
-              setUser(session.user);
-              setShouldRedirect(false);
-              
-              // Set a timeout for profile/role fetching
-              const profileTimeout = setTimeout(() => {
-                if (mounted) {
-                  console.log('Profile fetch timed out on sign in, setting default role');
-                  setRole('applicant');
-                  setLoading(false);
-                }
-              }, 3000);
-
-              try {
-                await fetchUserRole(session.user.id, session.user.email || '');
-                clearTimeout(profileTimeout);
-              } catch (error) {
-                console.error('Error fetching user role on sign in:', error);
-                setRole('applicant');
-                setLoading(false);
-              }
-            }
-            break;
-            
-          default:
-            if (session?.user) {
-              console.log('Session exists:', session.user);
-              setUser(session.user);
-              setShouldRedirect(false);
-              
-              const profileTimeout = setTimeout(() => {
-                if (mounted) {
-                  console.log('Profile fetch timed out in default case, setting default role');
-                  setRole('applicant');
-                  setLoading(false);
-                }
-              }, 3000);
-
-              try {
-                await fetchUserRole(session.user.id, session.user.email || '');
-                clearTimeout(profileTimeout);
-              } catch (error) {
-                console.error('Error fetching user role in default case:', error);
-                setRole('applicant');
-                setLoading(false);
-              }
-            } else {
-              console.log('No session, clearing state');
-              setUser(null);
-              setRole('public');
-              setLoading(false);
-            }
-        }
-      } catch (error) {
-        console.error('Error in auth state change handler:', error);
-        setUser(null);
+          });
+      } else {
         setRole('public');
         setLoading(false);
       }
     });
 
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (data) {
+          setRole(data.role);
+        }
+      } else {
+        setRole('public');
+      }
+    });
+
     return () => {
-      console.log('Cleaning up auth effect');
-      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  // Show loading state only during initial load
-  if (loading) {
-    console.log('Showing loading state:', { user, role, loading });
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-primary">
-          <div>Loading authentication...</div>
-          <div className="text-sm text-gray-500 mt-2">
-            {user ? 'Fetching user profile...' : 'Checking session...'}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (shouldRedirect) {
-    console.log('Redirecting to login');
-    return <Navigate to="/login" replace />;
-  }
-
-  console.log('AuthProvider current state:', { user, role, loading });
-
   const value = {
     user,
     loading,
-    error,
     role,
     updateProfile,
     hasRole,
