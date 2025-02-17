@@ -40,129 +40,148 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
     });
 
     // Add timeout to the fetch
-    const fetchPromise = client
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    const timeoutMs = 5000; // 5 seconds timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    console.log('Fetch request initiated');
+    console.log('Fetch request initiated with timeout:', timeoutMs);
 
-    const { data: profile, error: fetchError } = await fetchPromise;
+    try {
+      const { data: profile, error: fetchError } = await client
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .abortSignal(controller.signal)
+        .single();
 
-    console.log('Profile fetch completed with:', { profile, fetchError });
+      clearTimeout(timeoutId);
+      console.log('Profile fetch completed with:', { profile, fetchError });
 
-    if (profile) {
-      console.log('Existing profile found with role:', profile.role);
-      return { role: profile.role };
-    }
+      if (profile) {
+        console.log('Existing profile found with role:', profile.role);
+        return { role: profile.role };
+      }
 
-    // Handle specific error cases
-    if (fetchError) {
-      console.error('Fetch error details:', {
-        code: fetchError.code,
-        message: fetchError.message,
-        details: fetchError.details,
-        hint: fetchError.hint
-      });
+      // Handle specific error cases
+      if (fetchError) {
+        console.error('Fetch error details:', {
+          code: fetchError.code,
+          message: fetchError.message,
+          details: fetchError.details,
+          hint: fetchError.hint
+        });
 
-      // If no rows found, create profile
-      if (fetchError.code === 'PGRST116' || !profile) {
-        console.log('No profile found, creating new profile');
-        
-        // Log the insert request
-        const insertUrl = `${baseUrl}/rest/v1/profiles`;
-        console.log('Making insert request to:', insertUrl);
-        
-        const { data: newProfile, error: createError } = await client
-          .from('profiles')
-          .insert([
-            {
-              id: user.id,
-              email: user.email,
-              role: 'applicant',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ])
-          .select('role')
-          .single();
+        // If request was aborted due to timeout
+        if (fetchError.message?.includes('aborted') || fetchError.message?.includes('timeout')) {
+          console.error('Profile fetch timed out after', timeoutMs, 'ms');
+          return { role: 'public' };
+        }
 
-        console.log('Profile creation result:', { newProfile, createError });
+        // If no rows found, create profile
+        if (fetchError.code === 'PGRST116' || !profile) {
+          console.log('No profile found, creating new profile');
+          
+          // Log the insert request
+          const insertUrl = `${baseUrl}/rest/v1/profiles`;
+          console.log('Making insert request to:', insertUrl);
+          
+          const { data: newProfile, error: createError } = await client
+            .from('profiles')
+            .insert([
+              {
+                id: user.id,
+                email: user.email,
+                role: 'applicant',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+            ])
+            .select('role')
+            .single();
 
-        if (createError) {
-          console.error('Create error details:', {
-            code: createError.code,
-            message: createError.message,
-            details: createError.details,
-            hint: createError.hint
-          });
+          console.log('Profile creation result:', { newProfile, createError });
 
-          // If profile was created by another request, try to fetch it
-          if (createError.code === '23505') {
-            console.log('Profile exists (race condition), fetching existing profile');
-            const { data: existingProfile, error: refetchError } = await client
-              .from('profiles')
-              .select('role')
-              .eq('id', user.id)
-              .single();
+          if (createError) {
+            console.error('Create error details:', {
+              code: createError.code,
+              message: createError.message,
+              details: createError.details,
+              hint: createError.hint
+            });
 
-            if (refetchError) {
-              console.error('Error fetching existing profile:', refetchError);
-              return { role: 'public' };
+            // If profile was created by another request, try to fetch it
+            if (createError.code === '23505') {
+              console.log('Profile exists (race condition), fetching existing profile');
+              const { data: existingProfile, error: refetchError } = await client
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+              if (refetchError) {
+                console.error('Error fetching existing profile:', refetchError);
+                return { role: 'public' };
+              }
+
+              if (existingProfile) {
+                console.log('Successfully fetched existing profile:', existingProfile);
+                return { role: existingProfile.role };
+              }
             }
 
-            if (existingProfile) {
-              console.log('Successfully fetched existing profile:', existingProfile);
-              return { role: existingProfile.role };
-            }
+            // For any other creation error, return public role
+            return { role: 'public' };
           }
 
-          // For any other creation error, return public role
-          return { role: 'public' };
+          if (newProfile) {
+            console.log('New profile created with role:', newProfile.role);
+            return { role: newProfile.role };
+          }
         }
 
-        if (newProfile) {
-          console.log('New profile created with role:', newProfile.role);
-          return { role: newProfile.role };
+        // Handle permission errors
+        if (fetchError.code === 'PGRST301') {
+          console.log('Permission error, checking auth status...');
+          const { data: { session }, error: sessionError } = await auth.getSession();
+          
+          if (sessionError || !session) {
+            console.error('Auth session invalid:', sessionError);
+            return { role: 'public' };
+          }
+
+          // Try one more time with fresh session
+          const { data: retryProfile, error: retryError } = await client
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+          if (retryProfile) {
+            console.log('Profile fetch succeeded after session refresh:', retryProfile);
+            return { role: retryProfile.role };
+          }
+
+          if (retryError) {
+            console.error('Profile fetch failed after session refresh:', retryError);
+            return { role: 'public' };
+          }
         }
+
+        // For any other fetch error, return public role
+        return { role: 'public' };
       }
 
-      // Handle permission errors
-      if (fetchError.code === 'PGRST301') {
-        console.log('Permission error, checking auth status...');
-        const { data: { session }, error: sessionError } = await auth.getSession();
-        
-        if (sessionError || !session) {
-          console.error('Auth session invalid:', sessionError);
-          return { role: 'public' };
-        }
-
-        // Try one more time with fresh session
-        const { data: retryProfile, error: retryError } = await client
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (retryProfile) {
-          console.log('Profile fetch succeeded after session refresh:', retryProfile);
-          return { role: retryProfile.role };
-        }
-
-        if (retryError) {
-          console.error('Profile fetch failed after session refresh:', retryError);
-          return { role: 'public' };
-        }
-      }
-
-      // For any other fetch error, return public role
+      // Fallback case
+      console.warn('No profile or error returned - defaulting to public role');
       return { role: 'public' };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Profile fetch aborted due to timeout');
+        return { role: 'public' };
+      }
+      throw error;
     }
-
-    // Fallback case
-    console.warn('No profile or error returned - defaulting to public role');
-    return { role: 'public' };
   } catch (error) {
     console.error('Unexpected error in getOrCreateProfile:', {
       error,
@@ -319,12 +338,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await auth.signIn(email, password);
+    const { error } = await auth.signInWithPassword({ email, password });
     if (error) throw error;
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await auth.signUp(email, password);
+    const { error } = await auth.signUp({ email, password });
     if (error) throw error;
   };
 

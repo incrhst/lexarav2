@@ -1,56 +1,74 @@
-import { createClient } from '@supabase/supabase-js';
-import { Database } from './database.types';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from './database.types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+// Singleton instance
+let supabaseInstance: SupabaseClient<Database> | null = null;
+let supabaseAdminInstance: SupabaseClient<Database> | null = null;
 
 // Create Supabase client with default auth settings
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  global: {
-    headers: {
-      'x-my-custom-header': 'my-app-name'
-    }
-  },
-  db: {
-    schema: 'public'
+export const supabase = (() => {
+  if (supabaseInstance) return supabaseInstance;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
   }
-});
+
+  supabaseInstance = createClient<Database>(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'x-my-custom-header': 'my-app-name'
+      }
+    }
+  });
+
+  return supabaseInstance;
+})();
 
 // Create service role client for admin operations
-export const supabaseAdmin = supabaseServiceKey 
-  ? createClient<Database>(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      },
-      global: {
-        headers: {
-          'x-my-custom-header': 'my-app-name-admin'
-        }
-      },
-      db: {
-        schema: 'public'
+export const supabaseAdmin = (() => {
+  if (supabaseAdminInstance) return supabaseAdminInstance;
+
+  if (!supabaseServiceKey) return null;
+
+  supabaseAdminInstance = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    },
+    global: {
+      headers: {
+        'x-my-custom-header': 'my-app-name-admin'
       }
-    })
-  : null;
+    }
+  });
+
+  return supabaseAdminInstance;
+})();
+
+// Ensure supabase is not null before using it
+if (!supabase) {
+  throw new Error('Failed to initialize Supabase client');
+}
 
 // Add debug logging
 supabase.auth.onAuthStateChange((event, session) => {
   console.log('Supabase Auth State Change:', { event, session });
+  
   if (session) {
-    console.log('JWT Token:', session.access_token);
+    const token = session.access_token;
+    console.log('JWT Token:', token);
+    
     try {
-      const decoded = JSON.parse(atob(session.access_token.split('.')[1]));
+      const decoded = JSON.parse(atob(token.split('.')[1]));
       console.log('Decoded JWT:', decoded);
     } catch (error) {
       console.error('Error decoding JWT:', error);
@@ -58,84 +76,13 @@ supabase.auth.onAuthStateChange((event, session) => {
   }
 });
 
-// Export auth helper functions
-export const auth = {
-  signIn: async (email: string, password: string) => {
-    console.log('Attempting sign in for:', email);
-    const result = await supabase.auth.signInWithPassword({ email, password });
-    console.log('Sign in result:', result);
-    return result;
-  },
-  signUp: async (email: string, password: string) => {
-    console.log('Attempting sign up for:', email);
-    const result = await supabase.auth.signUp({ email, password });
-    console.log('Sign up result:', result);
-    return result;
-  },
-  signOut: async () => {
-    console.log('Attempting sign out');
-    const result = await supabase.auth.signOut();
-    console.log('Sign out result:', result);
-    return result;
-  },
-  getSession: async () => {
-    console.log('Getting session');
-    const result = await supabase.auth.getSession();
-    console.log('Get session result:', result);
-    return result;
-  },
-  onAuthStateChange: (callback: (event: any, session: any) => void) => {
-    console.log('Setting up auth state change listener');
-    return supabase.auth.onAuthStateChange(callback);
-  }
-};
+// Test connection
+console.log('Testing Supabase connection...');
+console.log('URL:', supabaseUrl);
+console.log('Key (first 10 chars):', supabaseKey?.substring(0, 10));
 
-// Test function to verify connection
-export async function testSupabaseConnection() {
-  console.log('Testing Supabase connection...');
-  console.log('URL:', supabaseUrl);
-  console.log('Key (first 10 chars):', supabaseKey.substring(0, 10) + '...');
-  
-  try {
-    // Test auth service first
-    const { data: authData, error: authError } = await supabase.auth.getSession();
-    
-    if (authError) {
-      console.error('Auth service test error:', authError.message);
-      return false;
-    }
-    console.log('✅ Auth service connection successful');
-
-    // Test profiles table
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select('*')
-      .limit(1);
-
-    if (profilesError) {
-      console.error('Profiles table test error:', profilesError.message);
-      return false;
-    }
-    console.log('✅ Profiles table accessible');
-
-    // Test applications table
-    const { data: applicationsData, error: applicationsError } = await supabase
-      .from('applications')
-      .select('*')
-      .limit(1);
-
-    if (applicationsError) {
-      console.error('Applications table test error:', applicationsError.message);
-      return false;
-    }
-    console.log('✅ Applications table accessible');
-
-    return true;
-  } catch (err) {
-    console.error('Unexpected error during connection test:', err);
-    return false;
-  }
-}
+// Export auth instance
+export const auth = supabase.auth;
 
 // ------------------- Additional Type Definitions, Utilities, and API Functions -------------------
 
