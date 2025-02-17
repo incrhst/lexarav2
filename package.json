@@ -12,7 +12,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.3.4",
-    "@supabase/supabase-js": "^2.39.7",
+    "@supabase/supabase-js": "^2.48.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.344.0",

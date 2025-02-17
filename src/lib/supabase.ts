@@ -61,3 +61,158 @@ export async function testSupabaseConnection() {
     return false;
   }
 }
+
+// ------------------- Additional Type Definitions, Utilities, and API Functions -------------------
+
+// Response type definition
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+}
+
+// Simple error handling utility
+function handleApiError(error: any): string {
+  return error?.message || 'Unknown error occurred';
+}
+
+// ------------------- Database Table Type Definitions -------------------
+export interface Application {
+  id: string;
+  applicant_id: string;
+  status: string;
+  // Add additional fields as needed
+}
+
+export interface ApplicationFile {
+  id: string;
+  application_id: string;
+  file_url: string;
+  // Add additional fields as needed
+}
+
+export interface FilingRecord {
+  id: string;
+  application_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  // Add additional fields as needed
+}
+
+export interface Certificate {
+  id: string;
+  application_id: string;
+  certificate_number: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  // Add additional fields as needed
+}
+
+export interface Payment {
+  id: string;
+  application_id: string;
+  amount: number;
+  payment_method: 'card' | 'bank_transfer' | 'check';
+  payment_date: string;
+  status: string;
+  receipt_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ------------------- API Functions -------------------
+
+// Filing Management
+export async function createFilingRecord(record: Partial<FilingRecord>): Promise<ApiResponse<FilingRecord>> {
+  const { data, error } = await supabase
+    .from('filing_records')
+    .insert(record)
+    .single();
+  if (error) {
+    return { error: handleApiError(error) };
+  }
+  return { data: data as FilingRecord };
+}
+
+export async function getFilingRecords(applicationId: string): Promise<ApiResponse<FilingRecord[]>> {
+  const { data, error } = await supabase
+    .from('filing_records')
+    .select('*')
+    .eq('application_id', applicationId);
+  if (error) {
+    return { error: handleApiError(error) };
+  }
+  return { data: data as FilingRecord[] };
+}
+
+// Document Handling
+export async function uploadDocument(record: Partial<ApplicationFile>): Promise<ApiResponse<ApplicationFile>> {
+  const { data, error } = await supabase
+    .from('application_files')
+    .insert(record)
+    .single();
+  if (error) {
+    return { error: handleApiError(error) };
+  }
+  return { data: data as ApplicationFile };
+}
+
+export async function getDocuments(applicationId: string): Promise<ApiResponse<ApplicationFile[]>> {
+  const { data, error } = await supabase
+    .from('application_files')
+    .select('*')
+    .eq('application_id', applicationId);
+  if (error) {
+    return { error: handleApiError(error) };
+  }
+  return { data: data as ApplicationFile[] };
+}
+
+// Certificate Processing
+export async function createCertificate(record: Partial<Certificate>): Promise<ApiResponse<Certificate>> {
+  const { data, error } = await supabase
+    .from('certificates')
+    .insert(record)
+    .single();
+  if (error) {
+    return { error: handleApiError(error) };
+  }
+  return { data: data as Certificate };
+}
+
+export async function getCertificate(applicationId: string): Promise<ApiResponse<Certificate>> {
+  const { data, error } = await supabase
+    .from('certificates')
+    .select('*')
+    .eq('application_id', applicationId)
+    .single();
+  if (error) {
+    return { error: handleApiError(error) };
+  }
+  return { data: data as Certificate };
+}
+
+// Payment Processing
+export async function createPayment(record: Partial<Payment>): Promise<ApiResponse<Payment>> {
+  const { data, error } = await supabase
+    .from('payments')
+    .insert(record)
+    .single();
+  if (error) {
+    return { error: handleApiError(error) };
+  }
+  return { data: data as Payment };
+}
+
+export async function getPaymentStatus(paymentId: string): Promise<ApiResponse<Payment>> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('id', paymentId)
+    .single();
+  if (error) {
+    return { error: handleApiError(error) };
+  }
+  return { data: data as Payment };
+}

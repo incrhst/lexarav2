@@ -34,18 +34,7 @@ export default function AdminRenewalDashboard() {
     try {
       const { data, error } = await supabase
         .from('applications')
-        .select(`
-          id,
-          title,
-          application_number,
-          type,
-          status,
-          next_renewal_date,
-          payment_status,
-          amount,
-          owner_name,
-          owner_email
-        `)
+        .select('id,title:applicant_name,type,status,next_renewal_date,payment_status,amount,owner_name,owner_email')
         .order('next_renewal_date', { ascending: true });
 
       if (error) throw error;

@@ -19,71 +19,76 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function verifyUserExists(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  
+  return !!data;
+}
+
 async function setupAdmin() {
   try {
     console.log('Creating admin user...');
     
-    // First check if the user already exists
-    const { data: existingUser } = await supabase.auth.signInWithPassword({
+    // Create new user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: 'admin@lexara.com',
-      password: 'Admin123!'
+      password: 'Admin123!',
+      options: {
+        data: {
+          role: 'admin'
+        }
+      }
     });
 
-    let userId;
+    if (authError) {
+      throw authError;
+    }
 
-    if (existingUser?.user) {
-      console.log('Admin user already exists');
-      userId = existingUser.user.id;
-    } else {
-      // Create new user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+    if (!authData.user) {
+      throw new Error('No user data returned');
+    }
+
+    const userId = authData.user.id;
+    console.log('Admin user created successfully');
+
+    // Create profile
+    console.log('Creating admin profile...');
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert([{
+        id: userId,
         email: 'admin@lexara.com',
-        password: 'Admin123!',
-        options: {
-          data: {
-            role: 'admin'
-          }
-        }
-      });
+        full_name: 'System Administrator',
+        role: 'admin'
+      }]);
 
-      if (authError) {
-        throw authError;
-      }
-
-      if (!authData.user) {
-        throw new Error('No user data returned');
-      }
-
-      userId = authData.user.id;
-      console.log('Admin user created successfully');
+    if (profileError) {
+      throw profileError;
     }
+    console.log('Admin profile created successfully');
 
+    // Create role
     console.log('Adding admin role...');
-
-    // Check if role already exists
-    const { data: existingRole } = await supabase
+    const { error: roleError } = await supabase
       .from('user_roles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
+      .insert([{ user_id: userId, role: 'admin' }]);
 
-    if (existingRole) {
-      console.log('Admin role already exists');
-    } else {
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert([{ user_id: userId, role: 'admin' }]);
-
-      if (roleError) {
-        throw roleError;
-      }
-      console.log('Admin role added successfully');
+    if (roleError) {
+      throw roleError;
     }
+    console.log('Admin role added successfully');
 
-    console.log('Setup completed successfully!');
+    console.log('\nSetup completed successfully!');
     console.log('\nAdmin Credentials:');
     console.log('Email: admin@lexara.com');
     console.log('Password: Admin123!');
+    console.log('\nPlease check your email to confirm your account.');
   } catch (error) {
     console.error('Error during setup:', error);
     process.exit(1);
