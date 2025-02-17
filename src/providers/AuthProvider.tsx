@@ -47,19 +47,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Clearing local state...');
       setUser(null);
       setRole('public');
-      
-      // Set redirect flag
-      console.log('Setting redirect flag...');
       setShouldRedirect(true);
+      setLoading(false);
+
+      // Force a complete reload and redirect
+      console.log('Forcing page reload and redirect...');
+      window.location.href = '/login';
     } catch (error) {
       console.error('Error in signOut function:', error);
-      // Even if there's an error, try to clean up local state
+      // Even if there's an error, try to clean up local state and redirect
       setUser(null);
       setRole('public');
       setShouldRedirect(true);
-      throw error;
-    } finally {
       setLoading(false);
+      window.location.href = '/login';
     }
   };
 
@@ -268,8 +269,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setRole('public');
             setShouldRedirect(true);
             setLoading(false);
-            // Force reload to clear any cached state
-            window.location.href = '/login';
             break;
             
           case 'SIGNED_IN':
