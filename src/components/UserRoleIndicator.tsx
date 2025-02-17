@@ -9,19 +9,28 @@ interface Props {
 }
 
 export default function UserRoleIndicator({ role, className }: Props) {
-  const roleLabels = {
+  console.log('UserRoleIndicator rendering with role:', role);
+
+  const roleLabels: Record<UserRole, string> = {
     admin: 'Administrator',
     processor: 'Processor',
     user: 'Registered User',
+    agent: 'Agent',
     public: 'Public User',
   };
 
-  const roleStyles = {
+  const roleStyles: Record<UserRole, string> = {
     admin: 'bg-primary text-background',
     processor: 'bg-primary-light text-background',
     user: 'bg-primary-lighter text-background',
+    agent: 'bg-primary-light text-background',
     public: 'bg-gray-200 text-primary',
   };
+
+  if (!roleLabels[role]) {
+    console.warn('Unknown role:', role);
+    return null;
+  }
 
   return (
     <div className={cn('flex items-center gap-2', className)}>

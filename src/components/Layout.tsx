@@ -1,123 +1,100 @@
 import React from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, LogOut, User, LogIn } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { useUserRole } from '../hooks/useUserRole';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { LogOut, LogIn, LucideIcon } from 'lucide-react';
+import { useAuthContext } from '../providers/AuthProvider';
 import { useNavigation } from '../hooks/useNavigation';
-import UserRoleIndicator from './UserRoleIndicator';
-import Button from './Button';
+import Header from './Header';
 import Logo from './Logo';
-import AdminLayout from './admin/AdminLayout';
+
+type NavigationLink = {
+  name: string;
+  to: string;
+  icon: LucideIcon;
+  end?: boolean;
+};
+
+type NavigationDivider = {
+  divider: boolean;
+};
+
+type NavigationItem = NavigationLink | NavigationDivider;
 
 export default function Layout() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { role, loading } = useUserRole();
+  const navigate = useNavigate();
+  const { user, role, loading, signOut } = useAuthContext();
   const navigation = useNavigation(role, loading);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
+  console.log('Layout render:', { user, role, loading, navigationItems: navigation });
+
+  const handleNavigation = async (item: NavigationLink) => {
+    console.log('Navigation item clicked:', item);
+    if (item.name === 'Sign Out') {
+      try {
+        console.log('Layout: Starting logout');
+        await signOut();
+        console.log('Layout: Logout successful');
+        navigate('/login', { replace: true });
+      } catch (error) {
+        console.error('Layout: Error signing out:', error);
+      }
+    } else {
+      navigate(item.to);
+    }
   };
 
-  // Don't render anything during initial load to prevent flashing
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-primary">Loading...</div>
-      </div>
-    );
-  }
-
-  // Use AdminLayout for admin routes
-  if (location.pathname.startsWith('/admin')) {
-    return <AdminLayout />;
-  }
-
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left Sidebar */}
-      <div className="w-64 bg-background-alt shadow-lg flex-shrink-0">
-        <div className="h-16 flex items-center px-4 border-b border-primary/10">
-          <Logo />
-        </div>
-        
-        <nav className="p-4 space-y-1">
-          {navigation.map((item, index) => 
-            item.divider ? (
-              <div key={`divider-${index}`} className="h-px bg-primary/10 my-2" />
-            ) : (
-              <Link
-                key={item.name}
-                to={item.to}
-                className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
-                  (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))
-                    ? 'bg-primary text-background'
-                    : 'text-primary hover:bg-primary/10'
-                }`}
-              >
-                <item.icon className="mr-3 h-5 w-5" />
-                {item.name}
-              </Link>
-            )
-          )}
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Top Header */}
-        <header className="h-16 bg-background-alt shadow-sm flex items-center justify-end px-8 gap-4">
-          {role !== 'public' && <UserRoleIndicator role={role} />}
-          
-          <button
-            type="button"
-            className="p-2 rounded-full text-primary hover:text-primary-light"
-          >
-            <Search className="h-6 w-6" />
-          </button>
-
-          <div className="flex items-center gap-4">
-            {role !== 'public' ? (
-              <>
-                <Link
-                  to="/profile"
-                  className="p-2 rounded-full text-primary hover:text-primary-light"
-                >
-                  <User className="h-6 w-6" />
-                </Link>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="flex items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </Button>
-              </>
-            ) : (
-              <div className="flex items-center gap-3">
-                <Link to="/register">
-                  <Button variant="primary" size="sm">
-                    Sign Up
-                  </Button>
-                </Link>
-                <Link to="/login">
-                  <Button variant="secondary" size="sm" className="flex items-center gap-2">
-                    <LogIn className="h-4 w-4" />
-                    Sign In
-                  </Button>
-                </Link>
-              </div>
-            )}
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <div className="pt-16 min-h-screen flex">
+        {/* Left Sidebar */}
+        <div className="w-64 bg-background-alt shadow-lg flex-shrink-0">
+          <div className="h-16 flex items-center px-4 border-b border-primary/10">
+            <Logo />
           </div>
-        </header>
+          
+          <nav className="p-4 space-y-1">
+            {loading ? (
+              <div className="text-sm text-gray-500">Loading navigation...</div>
+            ) : navigation && navigation.length > 0 ? (
+              navigation.map((item, index) => {
+                console.log('Rendering navigation item:', item);
+                return 'divider' in item ? (
+                  <div key={`divider-${index}`} className="h-px bg-primary/10 my-2" />
+                ) : (
+                  <button
+                    key={item.name}
+                    onClick={() => handleNavigation(item)}
+                    className={`w-full flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
+                      (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))
+                        ? 'bg-primary text-background'
+                        : 'text-primary hover:bg-primary/10'
+                    }`}
+                  >
+                    <item.icon className="mr-3 h-5 w-5" />
+                    {item.name}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="text-sm text-gray-500">No navigation items available</div>
+            )}
+          </nav>
+        </div>
 
-        {/* Page Content */}
-        <main className="flex-1 p-8">
-          <Outlet />
-        </main>
+        {/* Main Content */}
+        <div className="flex-1">
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="animate-pulse text-primary">Loading authentication...</div>
+            </div>
+          ) : (
+            <main className="p-8">
+              <Outlet />
+            </main>
+          )}
+        </div>
       </div>
     </div>
   );

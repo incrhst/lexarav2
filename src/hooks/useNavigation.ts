@@ -1,53 +1,123 @@
-import { useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
-  FileText, 
-  Users, 
-  Settings, 
-  LayoutList, 
-  ArrowLeft,
+  Home,
+  FileText,
+  ClipboardList,
+  Settings,
+  LogOut,
+  LogIn,
   Calendar,
   Scale,
-  Banknote
+  Banknote,
+  Users,
+  LucideIcon
 } from 'lucide-react';
+import { useAuthContext } from '../providers/AuthProvider';
 
-export function useNavigation(role: 'admin' | 'applicant' | 'public' | null, loading: boolean) {
-  const location = useLocation();
-  const isAdminSection = location.pathname.startsWith('/admin');
+type NavigationLink = {
+  name: string;
+  to: string;
+  icon: LucideIcon;
+  end?: boolean;
+};
 
-  return useMemo(() => {
-    // During loading, return empty array to prevent flashing
-    if (loading) return [];
+type NavigationDivider = {
+  divider: boolean;
+};
 
-    const userNavigation = [
-      { name: 'Dashboard', to: '/', icon: LayoutDashboard },
-      { name: 'Gazette', to: '/gazette', icon: FileText },
-    ];
+type NavigationItem = NavigationLink | NavigationDivider;
 
-    // Add admin navigation items if user is admin
-    if (role === 'admin') {
-      const adminNavigation = [
-        { name: 'Back to Main Menu', to: '/', icon: ArrowLeft },
-        { divider: true },
-        { name: 'Admin Overview', to: '/admin', icon: LayoutDashboard, end: true },
-        { name: 'Renewal Management', to: '/admin/renewals', icon: Calendar },
-        { name: 'Opposition Management', to: '/admin/oppositions', icon: Scale },
-        { name: 'Payment Verification', to: '/admin/payments', icon: Banknote },
-        { name: 'Applications', to: '/admin/applications', icon: LayoutList },
-        { name: 'Users', to: '/admin/users', icon: Users },
-        { name: 'Settings', to: '/admin/settings', icon: Settings },
-      ];
+export function useNavigation(role: string | null, loading: boolean): NavigationItem[] {
+  const { user } = useAuthContext();
 
-      // If we're in the admin section, only show admin navigation
-      if (isAdminSection) {
-        return adminNavigation;
-      }
+  console.log('useNavigation called with:', { role, loading, user });
 
-      // Otherwise, show regular navigation plus admin link
-      return [...userNavigation, { divider: true }, { name: 'Admin Dashboard', to: '/admin', icon: LayoutDashboard }];
-    }
+  if (loading) {
+    console.log('Navigation loading, returning empty array');
+    return [];
+  }
 
-    return userNavigation;
-  }, [role, isAdminSection, loading]);
+  const baseNavigation: NavigationItem[] = [
+    { name: 'Home', to: '/', icon: Home, end: true },
+  ];
+
+  const applicantNavigation: NavigationItem[] = [
+    ...baseNavigation,
+    { divider: true },
+    { name: 'My Applications', to: '/applications', icon: FileText },
+    { name: 'New Application', to: '/applications/new', icon: ClipboardList },
+    { name: 'Settings', to: '/settings', icon: Settings },
+  ];
+
+  const adminNavigation: NavigationItem[] = [
+    ...baseNavigation,
+    { divider: true },
+    { name: 'Renewal Management', to: '/admin/renewals', icon: Calendar },
+    { name: 'Opposition Management', to: '/admin/oppositions', icon: Scale },
+    { name: 'Payment Verification', to: '/admin/payments', icon: Banknote },
+    { name: 'Applications', to: '/admin/applications', icon: FileText },
+    { name: 'Users', to: '/admin/users', icon: Users },
+    { name: 'Settings', to: '/admin/settings', icon: Settings },
+  ];
+
+  const processorNavigation: NavigationItem[] = [
+    ...baseNavigation,
+    { divider: true },
+    { name: 'Applications', to: '/processor/applications', icon: FileText },
+    { name: 'Settings', to: '/settings', icon: Settings },
+  ];
+
+  const agentNavigation: NavigationItem[] = [
+    ...baseNavigation,
+    { divider: true },
+    { name: 'My Clients', to: '/agent/clients', icon: Users },
+    { name: 'Applications', to: '/agent/applications', icon: FileText },
+    { name: 'Settings', to: '/settings', icon: Settings },
+  ];
+
+  const publicNavigation: NavigationItem[] = [
+    ...baseNavigation,
+  ];
+
+  let navigation: NavigationItem[] = [];
+
+  console.log('Selecting navigation for role:', role);
+
+  switch (role) {
+    case 'admin':
+      navigation = adminNavigation;
+      break;
+    case 'applicant':
+      navigation = applicantNavigation;
+      break;
+    case 'processor':
+      navigation = processorNavigation;
+      break;
+    case 'agent':
+      navigation = agentNavigation;
+      break;
+    default:
+      navigation = publicNavigation;
+  }
+
+  // Add login/logout at the bottom
+  navigation.push({ divider: true });
+  
+  if (user) {
+    navigation.push({
+      name: 'Sign Out',
+      to: '#',
+      icon: LogOut,
+      end: true
+    });
+  } else {
+    navigation.push({
+      name: 'Sign In',
+      to: '/login',
+      icon: LogIn,
+      end: true
+    });
+  }
+
+  console.log('Returning navigation items:', navigation);
+  return navigation;
 }
