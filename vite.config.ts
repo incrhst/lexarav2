@@ -9,6 +9,18 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],
+    include: ['@stripe/stripe-js']
+  },
+  build: {
+    rollupOptions: {
+      external: ['@stripe/react-stripe-js', '@stripe/stripe-js'],
+      output: {
+        globals: {
+          '@stripe/react-stripe-js': 'ReactStripe',
+          '@stripe/stripe-js': 'Stripe'
+        }
+      }
+    }
   },
   server: {
     port: 5173,
