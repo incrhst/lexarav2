@@ -1,15 +1,22 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import dotenv from 'dotenv';
+import { resolve } from 'path';
 
 // Load environment variables
 dotenv.config();
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@stripe/react-stripe-js': resolve(__dirname, 'node_modules/@stripe/react-stripe-js'),
+      '@stripe/stripe-js': resolve(__dirname, 'node_modules/@stripe/stripe-js'),
+    },
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
-    include: ['@stripe/stripe-js', 'axios']
+    include: ['@stripe/stripe-js']
   },
   build: {
     rollupOptions: {
@@ -19,8 +26,16 @@ export default defineConfig({
           '@stripe/react-stripe-js': 'ReactStripe',
           '@stripe/stripe-js': 'Stripe',
           'axios': 'axios'
+        },
+        paths: {
+          '@stripe/react-stripe-js': 'https://cdn.jsdelivr.net/npm/@stripe/react-stripe-js@2.4.0/dist/react-stripe.umd.min.js',
+          '@stripe/stripe-js': 'https://cdn.jsdelivr.net/npm/@stripe/stripe-js@2.4.0/dist/stripe.min.js'
         }
       }
+    },
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
     }
   },
   server: {
