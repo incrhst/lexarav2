@@ -30,26 +30,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    // Get initial session
-    auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setState(prev => ({ ...prev, session, user: session.user }));
-        // Fetch role from profile
-        supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => {
-            if (data?.role) {
-              setState(prev => ({ 
-                ...prev, 
-                role: data.role as UserRole,
-                loading: false 
-              }));
-            }
-          });
-      } else {
+    async function initializeAuth() {
+      try {
+        // Get initial session
+        const { data: { session } } = await auth.getSession();
+        
+        if (session) {
+          setState(prev => ({ ...prev, session, user: session.user }));
+          
+          try {
+            // Fetch role from profile
+            const { data, error } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
+
+            setState(prev => ({ 
+              ...prev, 
+              role: (data?.role as UserRole) ?? 'public',
+              loading: false 
+            }));
+          } catch (error) {
+            console.error('Error fetching user role:', error);
+            setState(prev => ({ 
+              ...prev, 
+              role: 'public',
+              loading: false 
+            }));
+          }
+        } else {
+          setState(prev => ({ 
+            ...prev, 
+            session: null, 
+            user: null, 
+            role: 'public',
+            loading: false 
+          }));
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
         setState(prev => ({ 
           ...prev, 
           session: null, 
@@ -58,27 +78,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           loading: false 
         }));
       }
-    });
+    }
+
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
       setState(prev => ({ ...prev, session, user: session?.user ?? null }));
       
       if (session?.user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        setState(prev => ({ 
-          ...prev, 
-          role: (data?.role as UserRole) ?? 'public'
-        }));
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+          
+          setState(prev => ({ 
+            ...prev, 
+            role: (data?.role as UserRole) ?? 'public',
+            loading: false
+          }));
+        } catch (error) {
+          console.error('Error fetching user role:', error);
+          setState(prev => ({ 
+            ...prev, 
+            role: 'public',
+            loading: false
+          }));
+        }
       } else {
         setState(prev => ({ 
           ...prev, 
-          role: 'public'
+          role: 'public',
+          loading: false
         }));
       }
     });
