@@ -16,6 +16,7 @@ DROP POLICY IF EXISTS "Enable all operations for service role" ON public.profile
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.profiles;
 DROP POLICY IF EXISTS "Enable insert for authenticated users" ON public.profiles;
 DROP POLICY IF EXISTS "Enable update for users" ON public.profiles;
+DROP POLICY IF EXISTS "Allow all operations" ON public.profiles;
 
 -- Create profiles table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -30,24 +31,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Set up Row Level Security (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Create simplified policies
-CREATE POLICY "Enable read access for authenticated users"
+-- Create a single, simple policy
+CREATE POLICY "Allow all operations"
   ON public.profiles
-  FOR SELECT
-  TO authenticated
-  USING (true);
-
-CREATE POLICY "Enable insert for authenticated users"
-  ON public.profiles
-  FOR INSERT
-  TO authenticated
+  FOR ALL
+  USING (true)
   WITH CHECK (true);
-
-CREATE POLICY "Enable update for users"
-  ON public.profiles
-  FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = id);
 
 -- Create indexes if they don't exist
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);

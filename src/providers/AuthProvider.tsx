@@ -29,6 +29,16 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
     console.log('Fetching profile...');
     const client = supabaseAdmin || supabase;
 
+    // Log the request we're about to make
+    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const requestUrl = `${baseUrl}/rest/v1/profiles?id=eq.${user.id}&select=role`;
+    console.log('Making request to:', requestUrl);
+    console.log('With headers:', {
+      Authorization: 'Bearer [REDACTED]',
+      apikey: '[REDACTED]',
+      'Content-Type': 'application/json'
+    });
+
     // Add timeout to the fetch
     const fetchPromise = client
       .from('profiles')
@@ -59,6 +69,11 @@ async function getOrCreateProfile(user: User): Promise<{ role: UserRole }> {
       // If no rows found, create profile
       if (fetchError.code === 'PGRST116' || !profile) {
         console.log('No profile found, creating new profile');
+        
+        // Log the insert request
+        const insertUrl = `${baseUrl}/rest/v1/profiles`;
+        console.log('Making insert request to:', insertUrl);
+        
         const { data: newProfile, error: createError } = await client
           .from('profiles')
           .insert([
