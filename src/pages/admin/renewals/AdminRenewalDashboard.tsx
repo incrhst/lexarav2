@@ -10,14 +10,13 @@ import {
 interface RenewalApplication {
   id: string;
   title: string;
-  application_number: string;
   type: 'trademark' | 'patent';
   status: string;
-  next_renewal_date: string;
   payment_status: 'pending' | 'processing' | 'completed' | 'failed';
   amount: number;
   owner_name: string;
   owner_email: string;
+  created_at: string;
 }
 
 export default function AdminRenewalDashboard() {
@@ -34,8 +33,8 @@ export default function AdminRenewalDashboard() {
     try {
       const { data, error } = await supabase
         .from('applications')
-        .select('id,title:applicant_name,type,status,next_renewal_date,payment_status,amount,owner_name,owner_email')
-        .order('next_renewal_date', { ascending: true });
+        .select('id,title:applicant_name,type:application_type,status,payment_status,amount,owner_name,owner_email,created_at')
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
       setRenewals(data || []);
@@ -75,7 +74,7 @@ export default function AdminRenewalDashboard() {
   };
 
   const getStatusBadge = (renewal: RenewalApplication) => {
-    const dueDate = parseISO(renewal.next_renewal_date);
+    const dueDate = parseISO(renewal.created_at);
     const today = new Date();
     const isOverdue = dueDate < today;
 
@@ -113,7 +112,7 @@ export default function AdminRenewalDashboard() {
 
     if (!matchesSearch) return false;
 
-    const dueDate = parseISO(renewal.next_renewal_date);
+    const dueDate = parseISO(renewal.created_at);
     const today = new Date();
     const isOverdue = dueDate < today;
 
@@ -233,7 +232,7 @@ export default function AdminRenewalDashboard() {
                         <div className="text-gray-500">{renewal.owner_email}</div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {format(parseISO(renewal.next_renewal_date), 'MMM d, yyyy')}
+                        {format(parseISO(renewal.created_at), 'MMM d, yyyy')}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         £{renewal.amount}
