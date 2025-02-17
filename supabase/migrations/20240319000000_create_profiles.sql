@@ -31,12 +31,25 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Set up Row Level Security (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Create a single, simple policy
-CREATE POLICY "Allow all operations"
-  ON public.profiles
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
+-- Drop existing policies
+DROP POLICY IF EXISTS "Allow all operations" ON public.profiles;
+
+-- Create policies for authenticated users
+CREATE POLICY "Enable read access for authenticated users"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (auth.uid() = id);
+
+CREATE POLICY "Enable insert for authenticated users"
+  ON public.profiles FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Enable update for users"
+  ON public.profiles FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
 
 -- Create indexes if they don't exist
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);

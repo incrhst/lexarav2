@@ -24,13 +24,12 @@ function createSupabaseClient(): SupabaseClient<Database> {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
-      storageKey: 'lexara-auth-token', // Unique storage key to prevent conflicts
-      flowType: 'pkce' // Use PKCE flow for better security
+      storageKey: 'lexara-auth-token',
+      flowType: 'pkce'
     },
     global: {
       headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`
+        'apikey': supabaseKey
       }
     }
   });
@@ -54,13 +53,11 @@ function createSupabaseAdminClient(): SupabaseClient<Database> | null {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
-      storageKey: 'lexara-admin-token', // Unique storage key for admin client
-      flowType: 'pkce' // Use PKCE flow for better security
+      storageKey: 'lexara-admin-token'
     },
     global: {
       headers: {
-        'apikey': supabaseServiceKey,
-        'Authorization': `Bearer ${supabaseServiceKey}`
+        'apikey': supabaseServiceKey
       }
     }
   });
@@ -89,9 +86,6 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     try {
       const decoded = JSON.parse(atob(token.split('.')[1]));
       console.log('Decoded JWT:', decoded);
-      
-      // The client automatically updates its auth header when the session changes
-      // No need to manually update headers
     } catch (error) {
       console.error('Error decoding JWT:', error);
     }
