@@ -12,11 +12,12 @@ export default defineConfig({
     alias: {
       '@stripe/react-stripe-js': resolve(__dirname, 'node_modules/@stripe/react-stripe-js'),
       '@stripe/stripe-js': resolve(__dirname, 'node_modules/@stripe/stripe-js'),
+      'axios': resolve(__dirname, 'node_modules/axios'),
     },
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
-    include: ['@stripe/stripe-js']
+    include: ['@stripe/stripe-js', 'axios']
   },
   build: {
     rollupOptions: {
@@ -29,7 +30,8 @@ export default defineConfig({
         },
         paths: {
           '@stripe/react-stripe-js': 'https://cdn.jsdelivr.net/npm/@stripe/react-stripe-js@2.4.0/dist/react-stripe.umd.min.js',
-          '@stripe/stripe-js': 'https://cdn.jsdelivr.net/npm/@stripe/stripe-js@2.4.0/dist/stripe.min.js'
+          '@stripe/stripe-js': 'https://cdn.jsdelivr.net/npm/@stripe/stripe-js@2.4.0/dist/stripe.min.js',
+          'axios': 'https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js'
         }
       }
     },
